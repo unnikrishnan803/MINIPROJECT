@@ -19,33 +19,52 @@
 
 ---
 
-## 🛠️ Installation & Setup
+## 🛠️ Installation & Setup (Cross-Platform)
+
+Follow these steps to run the project on any machine (Windows, Mac, Linux).
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/yourusername/deliciae.git
-    cd deliciae
+    git clone https://github.com/unnikrishnan803/MINIPROJECT.git
+    cd MINIPROJECT
     ```
 
-2.  **Setup Backend (Django):**
+2.  **Set up Virtual Environment:**
+    - **Windows:**
+      ```bash
+      python -m venv venv
+      .\venv\Scripts\Activate
+      ```
+    - **Mac/Linux:**
+      ```bash
+      python3 -m venv venv
+      source venv/bin/activate
+      ```
+
+3.  **Install Dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Configure Environment:**
+    - Copy `.env.example` to `.env`:
+      ```bash
+      cp .env.example .env  # On Windows use: copy .env.example .env
+      ```
+    - Open `.env` and add your keys (optional for basic local run).
+
+5.  **Run Migrations & Server:**
     ```bash
     cd backend
-    python -m venv venv
-    ./venv/Scripts/Activate  # or source venv/bin/activate on Mac/Linux
-    pip install django djangorestframework
     python manage.py migrate
     python populate_db.py  # (Optional) Load sample data
     python manage.py runserver
     ```
 
-3.  **Run Application:**
-    - The application (Frontend + Backend) is served by Django.
-    - Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** in your browser.
-    - **Do not** open HTML files directly or use a separate live server for pages with `{% ... %}` tags.
-
-4.  **Login Credentials:**
-    - **Restaurant:** `pizza_paradise@example.com` / `res123`
-    - **Admin:** `admin@example.com` / `admin123`
+6.  **Access the App:**
+    - Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)**
+    - **Restaurant Login:** `pizza_paradise@example.com` / `res123`
+    - **Admin Login:** `admin@example.com` / `admin123`
 
 ---
 
