@@ -1,0 +1,84 @@
+\documentclass[12pt, a4paper]{report}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\title{\textbf{DELICIAE: AI-Powered Smart Dining Platform}}
+\author{Your Name \\ \textit{Computer Science Department}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Deliciae is a modern, AI-powered web application designed to bridge the gap between customers and restaurants by providing real-time food availability, smart trend detection, and a premium dining experience. By leveraging Django for a robust backend, Firebase for real-time authentication, and an intelligent frontend design, Deliciae addresses common issues such as ordering unavailable food and lack of transparency in food trends. This report details the design, implementation, and future scope of the Deliciae platform.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\chapter{Introduction}
+\section{Project Overview}
+The food industry faces significant challenges in inventory management and customer satisfaction. Customers often face the disappointment of ordering items that are sold out, while restaurants struggle to predict demand and identify trending dishes. Deliciae solves these problems by providing a unified platform where restaurants can update availability in real-time, and customers can view live status and AI-driven trends.
+
+\section{Problem Statement}
+\begin{itemize}
+    \item \textbf{Static Menus:} Traditional online menus do not reflect real-time kitchen status.
+    \item \textbf{Trend Blindness:} Restaurants lack insights into what dishes are currently popular in their locality.
+    \item \textbf{User Experience:} Many food apps lack a premium, engaging user interface.
+\end{itemize}
+
+\section{Proposed Solution}
+Deliciae introduces:
+\begin{itemize}
+    \item Real-time availability toggles for restaurants.
+    \item "Trending Now" sections powered by interaction analytics.
+    \item A Glassmorphism-based premium UI for enhanced user engagement.
+\end{itemize}
+
+\chapter{System Design}
+\section{Architecture}
+The system follows a Model-View-Template (MVT) architecture powered by Django, with a decoupled frontend design for flexibility.
+\begin{itemize}
+    \item \textbf{Frontend:} HTML5, CSS3 (Glassmorphism), JavaScript (ES6).
+    \item \textbf{Backend:} Django Rest Framework (DRF) for API endpoints.
+    \item \textbf{Database:} SQLite (Development) / PostgreSQL (Production).
+    \item \textbf{Authentication:} Firebase Auth / Django Auth.
+\end{itemize}
+
+\section{Modules}
+\subsection{Customer Module}
+Allows users to browse restaurants, search for food, view real-time status, and see trending items.
+\subsection{Restaurant Module}
+Provides a dedicated dashboard for owners to manage their menu, toggle item availability, and view basic analytics.
+
+\chapter{Implementation}
+\section{Database Schema}
+The core entities are:
+\begin{itemize}
+    \item \textbf{User:} Stores authentication details and roles (Customer/Restaurant).
+    \item \textbf{Restaurant:} Stores profile, cuisine type, and location.
+    \item \textbf{FoodItem:} Represents menu items with attributes like price, category, and \texttt{is\_available} status.
+    \item \textbf{FoodAnalytics:} Tracks views and orders to calculate Trend Scores.
+\end{itemize}
+
+\section{Key Algorithms}
+\subsection{Trend Detection (Simplified)}
+The trend score is calculated based on a weighted sum of interactions:
+\[ Score = (w_1 \times Orders) + (w_2 \times Views) + (w_3 \times Ratings) \]
+Where $w_1 > w_2 > w_3$. This score is updated periodically to reflect current popularity.
+
+\chapter{Results and Discussion}
+The implemented system successfully allows:
+\begin{enumerate}
+    \item Instant updates of food availability from the Restaurant Dashboard to the Customer View.
+    \item Seamless filtering of food items by category and search terms.
+    \item A visually distinct "Premium" feel using glassmorphism effects and smooth animations.
+\end{enumerate}
+
+\chapter{Conclusion}
+Deliciae represents a significant step forward in smart dining technology. By integrating real-time data with premium design, it enhances the transparency and efficiency of the food ordering process. Future enhancements include implementing the full AI prediction engine and integrating a payment gateway.
+
+\end{document}

@@ -1,0 +1,62 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | Deliciae</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 450px;
+            padding: 2.5rem;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .auth-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            display: inline-block;
+        }
+        .auth-logo i { color: var(--accent-primary); }
+        .btn-primary { width: 100%; justify-content: center; margin-top: 1.5rem; }
+        p { color: var(--text-secondary); margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    
+    <div class="glow-bg top-left"></div>
+    <div class="glow-bg bottom-right"></div>
+
+    <div class="auth-container">
+        <div class="glass-card auth-card">
+            <a href="{% url 'index' %}" class="auth-logo"><i class="fas fa-utensils"></i> Deliciae</a>
+            
+            <h2>{% trans "Sign In" %}</h2>
+            <p>{% blocktrans with provider.name as provider %}You are about to connect a new third-party account from {{ provider }}.{% endblocktrans %}</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Continue with Google <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

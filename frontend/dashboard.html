@@ -1,0 +1,728 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Deliciae</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/search.css' %}">
+</head>
+<body class="dashboard-body">
+
+    <!-- Decorative BG -->
+    <div class="glow-bg top-left" style="opacity: 0.5;"></div>
+    <div class="glow-bg bottom-right" style="opacity: 0.5;"></div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-card">
+            <div class="logo">
+                <i class="fas fa-utensils"></i> Deliciae
+            </div>
+            
+            <nav class="side-nav">
+                <a href="#" class="nav-item active" onclick="showDashboardSection('home-view'); return false;"><i class="fas fa-home"></i> Home</a>
+                <a href="#" class="nav-item" onclick="showDashboardSection('reels-view'); fetchReels(); return false;"><i class="fas fa-play-circle"></i> Reels</a>
+                <a href="#" class="nav-item" onclick="showDashboardSection('orders-view'); initOrderTracking(); return false;"><i class="fas fa-receipt"></i> Orders</a>
+                <a href="#" class="nav-item" onclick="alert('Settings coming soon!'); return false;"><i class="fas fa-cog"></i> Settings</a>
+            </nav>
+
+            <div class="user-profile">
+                <img src="{{ user.socialaccount_set.first.get_avatar_url|default:'https://ui-avatars.com/api/?name='|add:user.username }}" alt="User" class="avatar">
+                <div class="user-info">
+                    <h4>{{ user.first_name|default:user.username }}</h4>
+                    <p style="font-size: 0.8rem; opacity: 0.7;">{{ user.role|title }}</p>
+                </div>
+                <a href="{% url 'account_logout' %}" class="logout-btn"><i class="fas fa-sign-out-alt"></i></a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="dashboard-header">
+                <div class="header-text">
+                    <h1>Hi, {{ user.first_name|default:user.username }}! 👋</h1>
+                    <p>
+                        {% if user.role == 'restaurant' %}
+                            Manage your restaurant
+                        {% else %}
+                            What are you craving today? 😋
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="header-actions">
+                    {% if user.role == 'restaurant' %}
+                        <button class="btn btn-sm btn-glass" onclick="openAddFoodModal()" title="Add Menu Item">
+                            <i class="fas fa-plus"></i> Add Item
+                        </button>
+                    {% else %}
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Search food..." style="width: 200px;">
+                        </div>
+                        
+                        <div style="border-left: 1px solid rgba(255,255,255,0.2); height: 20px; margin: 0 10px;"></div>
+                        
+                        <i class="fas fa-map-marker-alt"></i>
+                        <input type="text" id="locationInput" value="{{ user.current_location|default:'' }}" placeholder="Location (e.g. Kochi)" style="width: 150px; background: transparent; border: none; color: white; outline: none;">
+                        
+                        <button class="btn btn-sm btn-glass" onclick="detectLocation()" title="Detect My Location">
+                            <i class="fas fa-crosshairs"></i>
+                        </button>
+                        
+                        <div style="border-left: 1px solid rgba(255,255,255,0.2); height: 20px; margin: 0 10px;"></div>
+                        
+                        <button class="header-icon-btn" onclick="showDashboardSection('offers-view'); fetchOffers(); return false;" title="Offers">
+                            <i class="fas fa-gift"></i>
+                        </button>
+                        
+                        <div class="notification-wrapper">
+                            <button class="header-icon-btn" onclick="toggleNotifications()" title="Notifications">
+                                <i class="fas fa-bell"></i>
+                                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                            </button>
+                            
+                            <!-- Notification Dropdown -->
+                            <div class="notification-dropdown" id="notificationDropdown" style="display: none;">
+                                <div class="notification-header">
+                                    <h3>Notifications</h3>
+                                    <button class="btn-text" onclick="markAllNotificationsRead()">Mark all read</button>
+                                </div>
+                                <div class="notification-list" id="notificationList">
+                                    <div class="notification-empty">
+                                        <i class="fas fa-bell-slash"></i>
+                                        <p>No notifications</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </header>
+
+            {% if user.role == 'restaurant' %}
+                <!-- RESTAURANT DASHBOARD -->
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; margin-top: 1rem;">
+                    <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+                        <h3 style="font-size: 0.9rem; opacity: 0.8;">Total Orders</h3>
+                        <div style="font-size: 2rem; font-weight: 700;">0</div>
+                    </div>
+                    <div class="glass-card" style="padding: 1.5rem; text-align: center;">
+                        <h3 style="font-size: 0.9rem; opacity: 0.8;">Revenue</h3>
+                        <div style="font-size: 2rem; font-weight: 700; color: #2ecc71;">₹0</div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-bottom: 1rem;">Incoming Orders</h3>
+                <div class="glass-card" style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.6);">
+                    <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                    <p>No active orders</p>
+                </div>
+
+            {% else %}
+            <!-- CUSTOMER DASHBOARD START -->
+            <!-- Home View Wrapper -->
+            <div id="home-view">
+                <!-- Trending Section Removed for Simplicity -->
+
+                <!-- Restaurants Section (New) -->
+                <section class="restaurants-section" style="margin-bottom: 2rem;">
+                    <div class="section-title">
+                        <h3>Restaurants Near You <i class="fas fa-map-marked-alt" style="color: var(--accent-primary)"></i></h3>
+                    </div>
+                    <div class="trending-scroll" id="restaurantGrid">
+                         <!-- Dynamic Restaurant Items -->
+                         <div style="color:white; padding: 20px;">
+                            <i class="fas fa-spinner fa-spin"></i> Locating restaurants...
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Smart Highlights Section -->
+                <section class="smart-highlights" style="margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">✨ Smart Highlights</h3>
+                    
+                    <div class="trending-scroll" style="display: flex; gap: 1.5rem; margin-bottom: 2rem; overflow-x: auto; padding-bottom: 1rem;">
+                        <!-- Trending Now -->
+                        <div class="glass-card" style="padding: 1.5rem; min-width: 280px; flex: 0 0 auto;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                                <i class="fas fa-fire" style="color: var(--accent-primary); font-size: 1.2rem;"></i>
+                                <h4 style="margin: 0;">Trending Now</h4>
+                            </div>
+                            <div id="trendingHighlights" style="font-size: 0.9rem; color: var(--text-secondary);">
+                                <i class="fas fa-spinner fa-spin"></i> Loading...
+                            </div>
+                        </div>
+                        
+                        <!-- Fast Selling -->
+                        <div class="glass-card" style="padding: 1.5rem; min-width: 280px; flex: 0 0 auto;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                                <i class="fas fa-bolt" style="color: #ffc107; font-size: 1.2rem;"></i>
+                                <h4 style="margin: 0;">Fast Selling</h4>
+                            </div>
+                            <div id="fastSellingHighlights" style="font-size: 0.9rem; color: var(--text-secondary);">
+                                <i class="fas fa-spinner fa-spin"></i> Loading...
+                            </div>
+                        </div>
+                        
+                        <!-- Active Offers -->
+                        <div class="glass-card" style="padding: 1.5rem; min-width: 280px; flex: 0 0 auto;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                                <i class="fas fa-gift" style="color: #2ecc71; font-size: 1.2rem;"></i>
+                                <h4 style="margin: 0;">Active Offers</h4>
+                            </div>
+                            <div id="offersHighlights" style="font-size: 0.9rem; color: var(--text-secondary);">
+                                <i class="fas fa-spinner fa-spin"></i> Loading...
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Categories -->
+                <section class="categories-section">
+                    <div class="category-chip active">All</div>
+                    <div class="category-chip">Italian</div>
+                    <div class="category-chip">Chinese</div>
+                    <div class="category-chip">Indian</div>
+                    <div class="category-chip">Mexican</div>
+                    <div class="category-chip">Desserts</div>
+                </section>
+
+                <!-- All Food Grid -->
+                <section class="food-grid-section">
+                    <h3>Explore Delicious Food</h3>
+                    <!-- Dynamic Food Grid -->
+                    <div class="food-grid" id="foodGrid">
+                        <!-- Data will be loaded via API -->
+                        <div style="color:white; text-align:center; grid-column: 1/-1;">
+                            <i class="fas fa-spinner fa-spin"></i> Connecting to Deliciae Live Server...
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Reels View (Hidden by default) -->
+            <div id="reels-view" style="display: none; height: 80vh; overflow-y: scroll; scroll-snap-type: y mandatory; position: relative;">
+                <div id="reels-container" style="max-width: 500px; margin: 0 auto;">
+                    <!-- Reels loaded via JS -->
+                    <div style="text-align: center; padding-top: 100px; color: var(--text-secondary);">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i><br>Loading Reels...
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Offers View (Hidden by default) -->
+            <div id="offers-view" style="display: none;">
+                <section>
+                    <div class="section-title">
+                        <h3>🎁 Active Offers & Deals</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Claim exclusive offers from your favorite restaurants</p>
+                    </div>
+                    
+                    <div class="filter-tabs" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                        <button class="filter-tab active" onclick="filterOffers('all')">All Offers</button>
+                        <button class="filter-tab" onclick="filterOffers('followed')">Followed Restaurants</button>
+                    </div>
+                    
+                    <div id="offersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
+                        <div style="text-align: center; padding: 2rem; color: var(--text-secondary); grid-column: 1/-1;">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i><br>Loading offers...
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Orders View (Hidden by default) -->
+            <div id="orders-view" style="display: none;">
+                <section>
+                    <div class="section-title">
+                        <h3>Track Your Orders <i class="fas fa-shipping-fast" style="color: var(--accent-primary)"></i></h3>
+                    </div>
+                    
+                    <div class="tabs-container" style="margin-bottom: 2rem;">
+                        <button class="tab-btn active" onclick="switchOrderTab('active')">Active Orders</button>
+                        <button class="tab-btn" onclick="switchOrderTab('history')">Order History</button>
+                    </div>
+
+                    <div id="activeOrdersContainer" class="orders-container">
+                        <div style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Fetching your live orders...
+                        </div>
+                    </div>
+
+                    <div id="orderHistoryContainer" class="orders-container" style="display: none;">
+                        <!-- History will be populated here -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Restaurant Profile Modal -->
+            <div id="restaurantProfileModal" class="modal" style="z-index: 2000;">
+                <div class="modal-content glass-card" style="width: 95%; max-width: 900px; height: 90vh; overflow-y: auto; margin: 2% auto; background: #111;">
+                    <span class="close-modal" onclick="document.getElementById('restaurantProfileModal').style.display='none'">&times;</span>
+                    
+                    <div id="profile-header" style="text-align: center; margin-bottom: 2rem;">
+                        <!-- JS Insert -->
+                    </div>
+                    
+                    <div class="profile-tabs" style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                        <a href="#" class="tab-link active" onclick="switchProfileTab('posts'); return false;"><i class="fas fa-th"></i> Posts</a>
+                        <a href="#" class="tab-link" onclick="switchProfileTab('menu'); return false;"><i class="fas fa-utensils"></i> Menu</a>
+                    </div>
+
+                    <div id="profile-body">
+                         <!-- JS Insert -->
+                    </div>
+                </div>
+            </div>
+            
+            {% endif %} <!-- End Role Logic -->
+        </main>
+    </div>
+
+    <!-- Modal (Add Food) -->
+    <div id="addFoodModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close-modal" onclick="closeAddFoodModal()">&times;</span>
+            <h2>Add New Item</h2>
+            <form>
+                <div class="form-group">
+                    <label>Item Name</label>
+                    <input type="text" id="newItemName" class="form-input" placeholder="e.g. Seafood Pasta">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="newItemCategory" class="form-input" style="background: rgba(255,255,255,0.05); color: white;">
+                        <option>Italian</option>
+                        <option>Indian</option>
+                        <option>Mexican</option>
+                        <option>Chinese</option>
+                        <option>Desserts</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" id="newItemPrice" class="form-input" placeholder="10.00">
+                </div>
+                <div class="form-group">
+                    <label>Video URL (Optional)</label>
+                    <input type="url" id="newItemVideo" class="form-input" placeholder="https://example.com/video.mp4">
+                    <small style="color: rgba(255,255,255,0.5); font-size: 0.7rem;">Direct link to MP4 or WebM video.</small>
+                </div>
+                <button type="button" class="btn btn-primary btn-full" onclick="addFoodItem()">Add Item</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Logic -->
+    <!-- Main Logic -->
+    <script src="{% static 'js/script.js' %}?v=3"></script>
+    
+    <!-- Add Food Item Logic -->
+    <script>
+        async function addFoodItem() {
+            const name = document.getElementById('newItemName').value;
+            const category = document.getElementById('newItemCategory').value;
+            const price = document.getElementById('newItemPrice').value;
+            const videoUrl = document.getElementById('newItemVideo').value;
+
+            if(!name || !price) {
+                alert("Please fill in Name and Price");
+                return;
+            }
+
+            const payload = {
+                name: name,
+                category: category,
+                price: price,
+                video_url: videoUrl,
+                is_available: true
+            };
+
+            try {
+                const res = await fetch('/api/food-items/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if(res.ok) {
+                    alert('Item added successfully!');
+                    closeAddFoodModal();
+                    // Clear form
+                    document.getElementById('newItemName').value = '';
+                    document.getElementById('newItemCategory').value = 'Italian';
+                    document.getElementById('newItemPrice').value = '';
+                    document.getElementById('newItemVideo').value = '';
+                } else {
+                    const data = await res.json();
+                    alert('Error adding item: ' + JSON.stringify(data));
+                }
+            } catch(err) {
+                console.error(err);
+                alert('Failed to connect to server.');
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+    
+    <!-- Offers & Notifications Logic -->
+    <script>
+        let currentOfferFilter = 'all';
+        
+        // Fetch and display offers
+        async function fetchOffers() {
+            try {
+                const url = currentOfferFilter === 'followed' 
+                    ? '/api/offers/?followed=true' 
+                    : '/api/offers/';
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch offers');
+                
+                const data = await response.json();
+                const offers = data.results || data;
+                displayOffers(offers);
+            } catch (error) {
+                console.error('Error fetching offers:', error);
+                document.getElementById('offersGrid').innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: var(--text-secondary); grid-column: 1/-1;">
+                        <i class="fas fa-exclamation-circle fa-2x"></i><br>
+                        Failed to load offers
+                    </div>
+                `;
+            }
+        }
+        
+        // Display offers in grid
+        function displayOffers(offers) {
+            const grid = document.getElementById('offersGrid');
+            
+            if (offers.length === 0) {
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary); grid-column: 1/-1;">
+                        <i class="fas fa-gift fa-3x" style="opacity: 0.3;"></i><br><br>
+                        <h3>No offers available</h3>
+                        <p>Check back later for exciting deals!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = offers.map(offer => `
+                <div class="offer-card">
+                    <div class="offer-badge">${offer.discount_percentage}% OFF</div>
+                    <h3 class="offer-title">${offer.title}</h3>
+                    <p class="offer-description">${offer.description}</p>
+                    <div class="offer-restaurant">
+                        <i class="fas fa-store"></i>
+                        <span>${offer.restaurant_name}</span>
+                    </div>
+                    <div class="offer-footer">
+                        <span class="offer-time">
+                            <i class="fas fa-clock"></i> ${offer.time_remaining}
+                        </span>
+                        ${offer.is_claimed 
+                            ? '<span class="offer-claimed"><i class="fas fa-check"></i> Claimed</span>'
+                            : `<button class="btn btn-primary" onclick="claimOffer(${offer.id})">
+                                <i class="fas fa-gift"></i> Claim Offer
+                              </button>`
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Claim an offer
+        async function claimOffer(offerId) {
+            try {
+                const response = await fetch(`/api/offers/${offerId}/claim/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ ' + data.message);
+                    fetchOffers(); // Refresh offers
+                    fetchNotifications(); // Refresh notifications
+                } else {
+                    alert('❌ ' + (data.message || 'Failed to claim offer'));
+                }
+            } catch (error) {
+                console.error('Error claiming offer:', error);
+                alert('❌ Failed to claim offer');
+            }
+        }
+        
+        // Filter offers
+        function filterOffers(type) {
+            currentOfferFilter = type;
+            
+            // Update active tab
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            fetchOffers();
+        }
+        
+        // Fetch notifications
+        async function fetchNotifications() {
+            try {
+                const response = await fetch('/api/notifications/', {
+                    headers: {
+                        'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch notifications');
+                
+                const notifications = await response.json();
+                updateNotificationBadge(notifications);
+                displayNotifications(notifications);
+            } catch (error) {
+                console.error('Error fetching notifications:', error);
+            }
+        }
+        
+        // Update notification badge
+        function updateNotificationBadge(notifications) {
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            const badge = document.getElementById('notificationBadge');
+            
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // Display notifications in dropdown
+        function displayNotifications(notifications) {
+            const list = document.getElementById('notificationList');
+            
+            if (notifications.length === 0) {
+                list.innerHTML = `
+                    <div class="notification-empty">
+                        <i class="fas fa-bell-slash"></i>
+                        <p>No notifications</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = notifications.slice(0, 10).map(notif => `
+                <div class="notification-item ${notif.is_read ? '' : 'unread'}" onclick="markNotificationRead(${notif.id})">
+                    <div class="notification-icon">
+                        <i class="fas fa-${getNotificationIcon(notif.notification_type)}"></i>
+                    </div>
+                    <div class="notification-content">
+                        <div class="notification-title">${notif.title}</div>
+                        <div class="notification-message">${notif.message}</div>
+                        <div class="notification-time">${formatTime(notif.created_at)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Get icon for notification type
+        function getNotificationIcon(type) {
+            const icons = {
+                'offer': 'gift',
+                'order': 'receipt',
+                'reel': 'play-circle',
+                'follow': 'user-plus',
+                'system': 'info-circle'
+            };
+            return icons[type] || 'bell';
+        }
+        
+        // Format timestamp
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000); // seconds
+            
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
+        }
+        
+        // Toggle notification dropdown
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notificationDropdown');
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            
+            if (dropdown.style.display === 'block') {
+                fetchNotifications();
+            }
+        }
+        
+        // Close notification dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('notificationDropdown');
+            const wrapper = event.target.closest('.notification-wrapper');
+            
+            if (!wrapper && dropdown && dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            }
+        });
+        
+        // Mark notification as read
+        async function markNotificationRead(notifId) {
+            try {
+                await fetch(`/api/notifications/${notifId}/mark_read/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                fetchNotifications(); // Refresh
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+        
+        // Mark all notifications as read
+        async function markAllNotificationsRead() {
+            try {
+                await fetch('/api/notifications/mark_all_read/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                fetchNotifications(); // Refresh
+            } catch (error) {
+                console.error('Error marking all notifications as read:', error);
+            }
+        }
+        
+        // Populate Smart Highlights
+        function populateSmartHighlights() {
+            // Fetch Smart Highlights from new AI Endpoint
+            fetch('/api/smart-highlights/')
+                .then(res => {
+                    if (!res.ok) throw new Error('Network response was not ok');
+                    return res.json();
+                })
+                .then(data => {
+                    // 1. Trending
+                    const trendingEl = document.getElementById('trendingHighlights');
+                    if (data.trending && data.trending.length > 0) {
+                        trendingEl.innerHTML = data.trending.map(item => `
+                            <div style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="placeQuickOrder(${item.id})">
+                                <div style="font-weight: 600; color: white;">${item.name}</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">${item.restaurant.name}</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        trendingEl.innerHTML = '<div style="color: var(--text-secondary);">No trending items</div>';
+                    }
+
+                    // 2. Fast Selling
+                    const fastSellingEl = document.getElementById('fastSellingHighlights');
+                    if (data.fast_selling && data.fast_selling.length > 0) {
+                        fastSellingEl.innerHTML = data.fast_selling.map(item => `
+                            <div style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="placeQuickOrder(${item.id})">
+                                <div style="font-weight: 600; color: white;">${item.name}</div>
+                                <div style="font-size: 0.8rem;">
+                                    <span style="color: #ffc107;">Only ${item.quantity_available} left!</span>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        fastSellingEl.innerHTML = '<div style="color: var(--text-secondary);">All items well stocked</div>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error loading highlights:', err);
+                    document.getElementById('trendingHighlights').innerHTML = '<span style="color:red; font-size:0.8rem;">Failed to load</span>';
+                    document.getElementById('fastSellingHighlights').innerHTML = '<span style="color:red; font-size:0.8rem;">Failed to load</span>';
+                });
+            
+            // Fetch and display active offers (Handle Pagination)
+            fetch('/api/offers/')
+                .then(res => res.json())
+                .then(data => {
+                    const offers = data.results || data; // Handle pagination
+                    const offersEl = document.getElementById('offersHighlights');
+                    
+                    if (offers && offers.length > 0) {
+                        offersEl.innerHTML = offers.slice(0, 3).map(offer => `
+                            <div style="padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <div style="font-weight: 600; color: white;">${offer.discount_percentage}% OFF</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">${offer.restaurant_name}</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        offersEl.innerHTML = '<div style="color: var(--text-secondary);">No active offers</div>';
+                    }
+                })
+                .catch(err => console.error('Error loading offers:', err));
+        }
+        
+        // Auto-fetch notifications every 30 seconds
+        setInterval(fetchNotifications, 30000);
+        
+        // Initial fetch on page load
+        if (document.getElementById('notificationBadge')) {
+            fetchNotifications();
+            populateSmartHighlights();
+        }
+    </script>
+    <script src="{% static 'js/orders.js' %}?v=2"></script>
+    
+    <!-- Logout Logic -->
+    <script>
+        function logout() {
+            window.location.href = "{% url 'account_logout' %}";
+        }
+    </script>
+</body>
+</html>

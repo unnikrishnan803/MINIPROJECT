@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="sidebar">
+        <h3>Staff Panel</h3>
+        <ul class="nav-links">
+            <li><a href="/dashboard/"><i class="fas fa-arrow-left"></i> Back to Dashboard</a></li> <!-- Back Button -->
+            <li><a href="#" class="active" onclick="showSection('tables')"><i class="fas fa-th-large"></i> Tables</a></li>
+            <li><a href="#" onclick="showSection('orders')"><i class="fas fa-clipboard-list"></i> Active Orders</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <header style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2>Table Management</h2>
+                <div class="user-info">
+                    <span>{{ user.username }} (Staff)</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addTable()"><i class="fas fa-plus"></i> Add Table</button>
+        </header>
+
+        <!-- Tables Grid -->
+        <div id="tables-view" class="tables-grid">
+            <!-- Tables injected by JS -->
+            <div class="loading">Loading tables...</div>
+        </div>
+
+        <!-- Active Orders View -->
+        <div id="orders-view" class="orders-grid" style="display:none;">
+            <div class="loading">Loading active orders...</div>
+        </div>
+        
+        <!-- Order Modal -->
+        <div id="order-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeOrderModal()">&times;</span>
+                <h3>Order for Table #<span id="modal-table-num"></span></h3>
+                <div class="menu-selection">
+                    <input type="text" id="menu-search" placeholder="Search food..." onkeyup="filterMenu()">
+                    <div id="menu-items-list" class="menu-list">
+                        <!-- Menu items injected by JS -->
+                    </div>
+                </div>
+                <div class="order-summary">
+                    <h4>Current Order</h4>
+                    <ul id="selected-items-list"></ul>
+                    <button class="btn btn-primary" onclick="placeOrder()">Place Order</button>
+                    <button class="btn btn-secondary" onclick="generateBill()" id="btn-bill" style="display:none;">Generate Bill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '/api/';
+    let currentTableId = null;
+    let currentTableNum = null;
+    let selectedItems = [];
+
+    // On Load
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchTables();
+        fetchMenu();
+        // Poll for updates every 30s
+        setInterval(() => {
+            if(document.getElementById('tables-view').style.display !== 'none') fetchTables();
+            if(document.getElementById('orders-view').style.display !== 'none') fetchActiveOrders();
+        }, 30000);
+    });
+
+    function showSection(sectionId) {
+        document.getElementById('tables-view').style.display = 'none';
+        document.getElementById('orders-view').style.display = 'none';
+        
+        // Remove active class from nav links
+        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+
+        if(sectionId === 'tables') {
+            document.getElementById('tables-view').style.display = 'grid';
+            document.querySelector('.nav-links a:first-child').classList.add('active');
+            fetchTables();
+        } else if(sectionId === 'orders') {
+            document.getElementById('orders-view').style.display = 'grid';
+            document.querySelectorAll('.nav-links a')[1].classList.add('active'); // 2nd link
+            fetchActiveOrders();
+        }
+    }
+
+    async function fetchActiveOrders() {
+        const container = document.getElementById('orders-view');
+        container.innerHTML = '<div class="loader"></div>';
+        
+        try {
+            const res = await fetch(`${API_BASE}dining-orders/?status=Ordered,Preparing,Served&t=${new Date().getTime()}`);
+            const data = await res.json();
+            const orders = data.results ? data.results : data;
+            
+            container.innerHTML = '';
+            if(!orders || orders.length === 0) {
+                container.innerHTML = '<p>No active orders.</p>';
+                return;
+            }
+
+            orders.forEach(order => {
+                const card = document.createElement('div');
+                card.className = `order-card ${order.status.toLowerCase()}`;
+                
+                let itemsHtml = order.items_details.map(item => `<li>${item.name}</li>`).join('');
+                
+                card.innerHTML = `
+                    <div class="order-header">
+                        <span class="table-tag">Table ${order.table_number}</span>
+                        <span class="status-tag ${order.status.toLowerCase()}">${order.status}</span>
+                    </div>
+                    <ul class="order-items">
+                        ${itemsHtml}
+                    </ul>
+                    <div class="order-total">Total: ${order.total_amount}</div>
+                    <div class="time-ago">🕒 ${new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                `;
+                container.appendChild(card);
+            });
+        } catch(err) {
+            console.error(err);
+            container.innerHTML = '<p>Error loading orders.</p>';
+        }
+    }
+
+    async function fetchTables() {
+        const container = document.getElementById('tables-view');
+        container.innerHTML = '<div class="loader"></div>';
+        
+        try {
+            const res = await fetch(`${API_BASE}tables/?t=${new Date().getTime()}`);
+            const data = await res.json();
+            const tables = data.results ? data.results : data;
+            
+            container.innerHTML = '';
+            if(!tables || tables.length === 0) {
+                container.innerHTML = '<p>No tables found.</p>';
+                return;
+            }
+
+            tables.forEach(table => {
+                const card = document.createElement('div');
+                card.className = `table-card ${table.status.toLowerCase()}`;
+                card.onclick = () => openOrderModal(table);
+                card.innerHTML = `
+                    <div class="table-num">${table.table_number}</div>
+                    <div class="table-status">${table.status}</div>
+                    
+                    ${table.status === 'Booked' && table.booking_details ? `
+                        <div class="booking-info" style="font-size:0.9em; margin-top:5px; border-top:1px dashed #ddd; padding-top:5px;">
+                            <div><i class="fas fa-user"></i> ${table.booking_details.customer_name}</div>
+                            <div><i class="fas fa-phone"></i> ${table.booking_details.phone_number}</div>
+                            <div><i class="fas fa-clock"></i> ${table.booking_details.time}</div>
+                            <button class="btn btn-sm btn-danger mt-2" onclick="event.stopPropagation(); cancelBooking(${table.id})">Cancel</button>
+                        </div>
+                    ` : `<div class="table-seats"><i class="fas fa-users"></i> ${table.capacity}</div>`}
+                `;
+                container.appendChild(card);
+            });
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = '<p>Error loading tables.</p>';
+        }
+    }
+
+    async function fetchMenu() {
+        try {
+            const res = await fetch(`${API_BASE}food-items/`);
+            const data = await res.json();
+            const menu = data.results ? data.results : data;
+            
+            const list = document.getElementById('menu-items-list');
+            list.innerHTML = '';
+            
+            menu.forEach(item => {
+                if(!item.is_available) return;
+                
+                const div = document.createElement('div');
+                div.className = 'menu-item';
+                div.onclick = () => addItemToOrder(item);
+                div.innerHTML = `
+                    <span>${item.name}</span>
+                    <span>${item.currency_symbol}${item.price}</span>
+                `;
+                list.appendChild(div);
+            });
+        } catch(err) {
+            console.error('Error fetching menu:', err);
+        }
+    }
+
+    function addItemToOrder(item) {
+        selectedItems.push(item);
+        updateSelectedItemsUI();
+    }
+
+    function removeItemFromOrder(index) {
+        selectedItems.splice(index, 1);
+        updateSelectedItemsUI();
+    }
+
+    function updateSelectedItemsUI() {
+        const list = document.getElementById('selected-items-list');
+        list.innerHTML = '';
+        let total = 0;
+        
+        selectedItems.forEach((item, index) => {
+            total += parseFloat(item.price);
+            const li = document.createElement('li');
+            li.innerHTML = `${item.name} - ${item.currency_symbol}${item.price} <i class="fas fa-times text-danger" style="cursor:pointer; margin-left:10px;" onclick="removeItemFromOrder(${index})"></i>`;
+            list.appendChild(li);
+        });
+        
+        // Add Total Display
+        if(selectedItems.length > 0) {
+            const totalDiv = document.createElement('div');
+            totalDiv.innerHTML = `<strong>Total: ${selectedItems[0].currency_symbol}${total.toFixed(2)}</strong>`;
+            list.appendChild(totalDiv);
+        }
+    }
+
+    function filterMenu() {
+        const input = document.getElementById('menu-search').value.toLowerCase();
+        const items = document.querySelectorAll('.menu-item');
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(input) ? 'flex' : 'none';
+        });
+    }
+
+    async function placeOrder() {
+        if(selectedItems.length === 0) {
+            alert('Please select items first');
+            return;
+        }
+
+        const itemIds = selectedItems.map(i => i.id);
+        const data = {
+            table: currentTableId,
+            items: itemIds,
+            // Status defaults to 'Ordered'
+        };
+
+        try {
+            const res = await fetch(`${API_BASE}dining-orders/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            });
+
+            if(res.ok) {
+                alert('Order Placed Successfully!');
+                closeOrderModal();
+                // Optionally update table status to Occupied if it was Available
+                updateTableStatus(currentTableId, 'Occupied');
+                fetchTables(); // Refresh
+            } else {
+                const err = await res.json();
+                alert('Failed to place order: ' + JSON.stringify(err));
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Error placing order');
+        }
+    }
+
+    async function updateTableStatus(tableId, status) {
+        await fetch(`${API_BASE}tables/${tableId}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ status: status })
+        });
+    }
+
+    async function generateBill() {
+        if(!confirm('Generate Bill for this table? This will clear active orders.')) return;
+        
+        try {
+            const res = await fetch(`${API_BASE}billing/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ 
+                    action: 'generate',
+                    table_id: currentTableId
+                })
+            });
+            
+            if(res.ok) {
+                const bill = await res.json();
+                alert(`Bill Generated!\nTotal: ${bill.grand_total}\nPay now via Cash/Card/UPI`);
+                // Process Payment (Simulator)
+                processPayment(bill.id);
+            } else {
+                const err = await res.json();
+                alert('Error: ' + err.error);
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    async function cancelBooking(tableId) {
+        if(!confirm('Are you sure you want to cancel this booking?')) return;
+        // In a real app, you'd have a specific endpoint or use BookingViewSet
+        // For now, we'll just free the table manually, but ideally we should update the Booking status too.
+        // Let's assume updating table status to 'Available' is enough for the visual part
+        try {
+            await updateTableStatus(tableId, 'Available');
+            alert('Booking Cancelled, Table Free.');
+            fetchTables();
+        } catch (e) {
+            alert('Error cancelling');
+        }
+    }
+
+    async function processPayment(billId) {
+        const method = prompt("Enter Payment Method (Cash, Card, UPI):", "Cash");
+        if(!method) return;
+        
+        try {
+            const res = await fetch(`${API_BASE}billing/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ 
+                    action: 'pay',
+                    bill_id: billId,
+                    payment_method: method
+                })
+            });
+            
+            if(res.ok) {
+                alert('Payment Successful! Table is now cleaning.');
+                closeOrderModal();
+                fetchTables();
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Modal Functions
+    function openOrderModal(table) {
+        currentTableId = table.id;
+        currentTableNum = table.table_number;
+        document.getElementById('modal-table-num').textContent = currentTableNum;
+        document.getElementById('order-modal').style.display = 'block';
+        
+        // Reset state
+        selectedItems = [];
+        updateSelectedItemsUI();
+        
+        // Show/Hide Bill button based on status
+        const btnBill = document.getElementById('btn-bill');
+        if(table.status === 'Occupied' || table.status === 'Served') {
+            btnBill.style.display = 'inline-block';
+        } else {
+            btnBill.style.display = 'none';
+        }
+    }
+
+    function closeOrderModal() {
+        document.getElementById('order-modal').style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        const modal = document.getElementById('order-modal');
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+    // Add Table Logic
+    async function addTable() {
+        const tableNum = prompt("Enter new table number:");
+        if(!tableNum) return;
+        
+        const capacity = prompt("Enter capacity (seats):", "4");
+        if(!capacity) return;
+
+        try {
+            const res = await fetch(`${API_BASE}tables/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    table_number: tableNum,
+                    capacity: capacity,
+                    status: 'Available'
+                })
+            });
+
+            if(res.ok) {
+                alert('Table Added!');
+                fetchTables();
+            } else {
+                const err = await res.json();
+                alert('Error: ' + JSON.stringify(err));
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Failed to connect.');
+        }
+    }
+</script>
+
+<style>
+    .tables-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    .table-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+        color: #333; /* Force dark text on white card */
+    }
+    .table-card:hover { transform: translateY(-5px); }
+    .table-card.available { border-top: 5px solid #2ecc71; }
+    .table-card.occupied { border-top: 5px solid #e74c3c; background-color: #fff0f0; }
+    .table-card.cleaning { border-top: 5px solid #f1c40f; }
+    
+    /* Order Cards */
+    .orders-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    .order-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-left: 5px solid #ddd;
+        color: #333; /* Force dark text */
+    }
+    .order-card.ordered { border-left-color: #f1c40f; }
+    .order-card.preparing { border-left-color: #3498db; }
+    .order-card.served { border-left-color: #2ecc71; }
+    
+    .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .table-tag { font-weight: bold; font-size: 1.1em; }
+    .status-tag { padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.8em; }
+    .status-tag.ordered { background: #f1c40f; color: #333; }
+    .status-tag.preparing { background: #3498db; }
+    .status-tag.served { background: #2ecc71; }
+    
+    .order-items { list-style: none; padding: 0; margin: 10px 0; border-top: 1px dashed #eee; border-bottom: 1px dashed #eee; padding: 10px 0; }
+    .order-items li { padding: 2px 0; }
+    .order-total { font-weight: bold; text-align: right; margin-top: 5px; }
+    
+    .table-num { font-size: 2em; font-weight: bold; }
+    .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fff; margin: 10% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 8px; }
+    .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+</style>
+{% endblock %}

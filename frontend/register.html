@@ -1,0 +1,211 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Deliciae</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <style>
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 450px;
+            padding: 2.5rem;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .auth-logo {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2rem;
+            display: inline-block;
+        }
+        .auth-logo i { color: var(--accent-primary); }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.05);
+            color: white;
+            font-family: var(--font-main);
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .form-input:focus {
+            border-color: var(--accent-primary);
+        }
+        
+        .auth-btn {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .auth-footer {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .auth-footer a { color: var(--accent-primary); font-weight: 600; }
+        
+        .role-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .role-option {
+            flex: 1;
+            padding: 0.6rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+        }
+        .role-option.active {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="glow-bg top-left"></div>
+    <div class="glow-bg bottom-right"></div>
+
+    <div class="auth-container">
+        <div class="glass-card auth-card">
+            <a href="{% url 'index' %}" class="auth-logo"><i class="fas fa-utensils"></i> Deliciae</a>
+            <h2>Create Account</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Join the smart dining revolution</p>
+
+            <form action="{% url 'account_signup' %}" method="POST">
+                {% csrf_token %}
+                
+                <!-- Role Selector -->
+                <div class="role-selector">
+                    <div class="role-option active" onclick="selectRole('{{ form.role.field.choices.0.0 }}', this)">Customer</div>
+                    <div class="role-option" onclick="selectRole('{{ form.role.field.choices.1.0 }}', this)">Restaurant</div>
+                </div>
+                
+                <!-- Hidden Input bound to the form field 'role' -->
+                <input type="hidden" name="role" id="id_role" value="customer">
+
+                <div class="form-group">
+                    <label class="form-label">Country</label>
+                    <div style="display: flex; gap: 10px;">
+                        {{ form.country }}
+                        <button type="button" class="btn btn-secondary" onclick="detectCountry()" style="width: auto; padding: 0.8rem;"><i class="fas fa-map-marker-alt"></i></button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" name="email" class="form-input" placeholder="you@example.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-input" placeholder="Create a strong password" required>
+                </div>
+
+                <!-- Restaurant Specific Fields (Hidden by default) -->
+                <div id="restaurant-fields" style="display: none; border-top: 1px dashed var(--glass-border); padding-top: 1.5rem; margin-top: 1.5rem;">
+                    <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: var(--accent-primary);">Restaurant Details</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Restaurant Name</label>
+                        <input type="text" name="restaurant_name" class="form-input" placeholder="e.g. The Burger Joint">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">City / Location</label>
+                        <div style="position: relative;">
+                            <input type="text" name="restaurant_location" id="id_restaurant_location" class="form-input" placeholder="e.g. Kochi">
+                            <i class="fas fa-map-marker-alt" style="position: absolute; right: 15px; top: 12px; color: var(--text-secondary);"></i>
+                        </div>
+                        <small style="color: grey; font-size: 0.8rem;">This will set your user location and help customers find you.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Image URL</label>
+                        <input type="url" name="restaurant_image_url" class="form-input" placeholder="https://...">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary auth-btn">Sign Up</button>
+            </form>
+            
+            <div class="social-login" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border);">
+                 <form action="{% provider_login_url 'google' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary social-btn" style="width: 100%; background: rgba(255,255,255,0.1); color: white; display: flex; justify-content: center; align-items: center; gap: 10px; padding: 0.8rem; border-radius: 30px; border: none; cursor: pointer;">
+                        <i class="fab fa-google"></i> Continue with Google
+                    </button>
+                </form>
+            </div>
+            
+            <div class="auth-footer">
+                Already have an account? <a href="{% url 'login' %}">Log In</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script removed as role selection needs backend adapter logic to work with Allauth -->
+
+    <!-- App Scripts -->
+    <script src="{% static 'js/auth.js' %}"></script>
+
+    <!-- Role Logic -->
+    <script>
+        function selectRole(roleValue, element) {
+            // Update UI
+            document.querySelectorAll('.role-option').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            
+            // Update Hidden Input
+            const roleInput = document.getElementById('id_role');
+            if(roleInput) roleInput.value = roleValue;
+
+            // Toggle Restaurant Fields
+            const restFields = document.getElementById('restaurant-fields');
+            if(roleValue === 'restaurant') {
+                restFields.style.display = 'block';
+                // Add required attributes if needed, though form logic might handle it
+                document.getElementsByName('restaurant_name')[0].required = true;
+                document.getElementsByName('restaurant_location')[0].required = true;
+            } else {
+                restFields.style.display = 'none';
+                document.getElementsByName('restaurant_name')[0].required = false;
+                document.getElementsByName('restaurant_location')[0].required = false;
+            }
+        }
+    </script>
+</body>
+</html>

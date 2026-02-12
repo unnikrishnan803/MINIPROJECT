@@ -1,0 +1,496 @@
+/* Deliciae Admin Theme - Glassmorphism & 3D */
+
+:root {
+    --bg-dark: #0f0f13;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --accent-primary: #ff6b35; /* Orange */
+    --accent-glow: rgba(255, 107, 53, 0.4);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --success: #2ecc71;
+    --danger: #e74c3c;
+    --font-main: 'Outfit', sans-serif;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: var(--font-main) !important;
+    background-image: 
+        radial-gradient(circle at 10% 20%, rgba(255, 107, 53, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(64, 112, 244, 0.15) 0%, transparent 40%);
+    background-attachment: fixed;
+}
+
+/* Header */
+#header {
+    background: rgba(20, 20, 25, 0.8) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--text-primary) !important;
+    padding: 15px 40px !important;
+}
+
+#branding h1 {
+    color: var(--accent-primary) !important;
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#user-tools {
+    color: var(--text-secondary);
+}
+
+/* Breadcrumbs */
+div.breadcrumbs {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    padding: 15px 40px !important;
+    border-bottom: 1px solid var(--glass-border);
+}
+div.breadcrumbs a {
+    color: var(--action-hover-color) !important; 
+}
+
+/* Modules / Containers */
+.module, .card, .login .content {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+    margin-bottom: 30px !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.module:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(255, 107, 53, 0.1) !important;
+    border-color: rgba(255, 107, 53, 0.3) !important;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px; /* Spacing between rows */
+}
+
+thead th {
+    background: transparent !important;
+    color: var(--text-secondary) !important;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    border: none !important;
+    padding: 10px 15px !important;
+}
+
+tbody tr {
+    background: rgba(255, 255, 255, 0.03) !important;
+    transition: 0.2s;
+}
+
+tbody tr:hover {
+    background: rgba(255, 107, 53, 0.1) !important;
+}
+
+tbody td {
+    border: none !important;
+    padding: 15px !important;
+    color: var(--text-primary);
+}
+
+tbody tr td:first-child { border-radius: 10px 0 0 10px; }
+tbody tr td:last-child { border-radius: 0 10px 10px 0; }
+
+/* Links */
+a:link, a:visited {
+    color: var(--accent-primary) !important;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+a:hover {
+    color: #ff8d65 !important;
+    text-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Buttons */
+.button, input[type=submit], input[type=button], .submit-row input {
+    background: var(--accent-primary) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px var(--accent-glow);
+    transition: 0.3s;
+}
+
+.button:hover, input[type=submit]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+}
+
+.deletelink {
+    background: transparent !important;
+    color: var(--danger) !important;
+    box-shadow: none !important;
+    border: 1px solid var(--danger) !important;
+}
+.deletelink:hover {
+    background: var(--danger) !important;
+    color: white !important;
+}
+
+/* Form Inputs */
+input[type=text], input[type=password], input[type=email], input[type=url], input[type=number], select, textarea {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent-primary) !important;
+    outline: none;
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Dashboard Specifics */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 3fr 1fr; /* Wider main column */
+    gap: 30px;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr; /* Stack on smaller screens */
+    }
+    
+    .dashboard-sidebar {
+        order: -1; /* Sidebar on top or bottom as preferred, usually bottom for stats */
+        margin-top: 30px;
+    }
+}
+
+.dashboard .module caption {
+    background: transparent !important;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 25px;
+    white-space: nowrap;
+}
+
+.dashboard .module table th {
+    width: auto; /* Let it grow */
+    white-space: nowrap; /* Prevent wrapping like "E\nm\na\ni\nl" */
+    text-align: left;
+    padding-right: 20px !important;
+}
+
+.dashboard .module table td {
+    white-space: nowrap;
+}
+
+/* Login Page specific override */
+.login #container {
+    background: transparent !important;
+    width: 100% !important;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login #content {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(20px) !important;
+    padding: 40px !important;
+    width: 400px;
+    margin: 0 !important;
+}
+
+.login #header { display: none; } /* Hide default header on login */
+.login .form-row { border: none !important; padding: 10px 0; }
+.login .submit-row { padding: 20px 0 0 0; }
+
+/* --- INNER PAGES (Change List, Filters, Forms) --- */
+
+/* Page Headers */
+#content h1 {
+    color: var(--accent-primary) !important;
+    font-weight: 700;
+}
+
+/* Toolbar / Search */
+#toolbar {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 10px;
+    padding: 15px !important;
+    margin-bottom: 20px !important;
+    color: var(--text-primary) !important;
+}
+
+#toolbar form input[type=submit] {
+    margin-left: 10px;
+}
+
+/* Change List Results */
+#changelist {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+#changelist #changelist-form {
+    flex: 1;
+}
+
+#changelist .results {
+    background: var(--glass-bg) !important;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+
+#changelist table thead th {
+    background: rgba(0,0,0,0.2) !important;
+    color: var(--accent-primary) !important;
+}
+
+#changelist table tbody tr.row1, 
+#changelist table tbody tr.row2 {
+    background: transparent !important;
+}
+
+#changelist table tbody tr:hover {
+    background: rgba(255, 107, 53, 0.1) !important;
+}
+
+/* Filter Sidebar */
+#changelist-filter {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 280px;
+    position: static; /* Reset absolute positioning if any */
+}
+
+#changelist-filter h2 {
+    background: rgba(255, 107, 53, 0.1) !important;
+    color: var(--accent-primary) !important;
+    padding: 15px !important;
+    margin: 0 !important;
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#changelist-filter h3 {
+    color: var(--text-secondary) !important;
+    padding: 15px 15px 5px 15px !important;
+    margin: 0 !important;
+    font-size: 0.9rem;
+}
+
+#changelist-filter ul {
+    padding: 0 15px 15px 15px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+#changelist-filter li {
+    list-style-type: none;
+    margin-bottom: 5px;
+}
+
+#changelist-filter li.selected {
+    border-left: 3px solid var(--accent-primary);
+    padding-left: 10px;
+}
+
+#changelist-filter li.selected a {
+    color: white !important;
+    font-weight: 600;
+}
+
+#changelist-filter a {
+    color: var(--text-secondary) !important;
+}
+
+#changelist-filter a:hover {
+    color: var(--accent-primary) !important;
+}
+
+/* Pagination */
+.paginator {
+    background: transparent !important;
+    border-top: none !important;
+    border-bottom: 1px solid var(--glass-border) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Forms & Fieldsets (Add/Change Pages) */
+fieldset.module {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px;
+    margin-bottom: 20px;
+}
+
+fieldset.module h2 {
+    background: rgba(0,0,0,0.2) !important;
+    color: var(--accent-primary) !important;
+    padding: 15px !important;
+    border-radius: 16px 16px 0 0;
+}
+
+.form-row {
+    border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+    padding: 15px !important;
+}
+
+.submit-row {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px;
+    box-shadow: none !important;
+    padding: 20px !important;
+}
+
+/* Calendar/Clock Widgets */
+.calendarbox, .clockbox {
+    background: #1a1a20 !important;
+    color: white !important;
+    border: 1px solid var(--glass-border) !important;
+}
+
+/* --- ADMIN ACTIONS (Select/Delete) --- */
+.actions {
+    background: rgba(255, 107, 53, 0.1) !important;
+    border: 1px solid var(--accent-primary) !important;
+    border-radius: 10px;
+    padding: 15px !important;
+    color: var(--text-primary) !important;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(5px);
+}
+
+.actions label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.actions select {
+    background: rgba(0,0,0,0.3) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: white !important;
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin: 0 10px;
+    width: auto !important;
+}
+
+.actions .button {
+    background: var(--accent-primary) !important;
+    padding: 5px 15px !important;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 10px rgba(255, 107, 53, 0.3) !important;
+}
+
+.actions .action-counter {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-left: auto; /* Push to right */
+}
+
+/* --- CUSTOM CHECKBOXES --- */
+/* Hide default checkbox */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: rgba(255,255,255,0.1);
+    margin: 0;
+    font: inherit;
+    color: currentColor;
+    width: 1.15em;
+    height: 1.15em;
+    border: 1px solid var(--glass-border);
+    border-radius: 4px; /* Soft square */
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+input[type="checkbox"]::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 0.1s transform ease-in-out;
+    box-shadow: inset 1em 1em var(--accent-primary);
+    transform-origin: center;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+input[type="checkbox"]:checked {
+    border-color: var(--accent-primary);
+    background-color: rgba(255, 107, 53, 0.1);
+}
+
+input[type="checkbox"]:checked::before {
+    transform: scale(1);
+}
+
+/* --- DELETE CONFIRMATION PAGE --- */
+.delete-confirmation form {
+    background: var(--glass-bg) !important;
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+}
+
+.delete-confirmation .cancel-link {
+    background: transparent !important;
+    border: 1px solid var(--text-secondary);
+    color: var(--text-secondary) !important;
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-right: 15px;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.delete-confirmation .cancel-link:hover {
+    border-color: white;
+    color: white !important;
+}
+
+.delete-confirmation input[type=submit] {
+    background: var(--danger) !important;
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+}
+

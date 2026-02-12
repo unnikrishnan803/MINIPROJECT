@@ -1,0 +1,188 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deliciae | Smart Dining Experience</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    
+    <!-- Decorative Background Elements -->
+    <div class="glow-bg top-left"></div>
+    <div class="glow-bg bottom-right"></div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav">
+        <div class="logo">
+            <i class="fas fa-utensils"></i> Deliciae
+        </div>
+        <ul class="nav-links">
+            <li><a href="#home" class="active">Home</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+        <div class="auth-buttons">
+            <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
+            <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+        </div>
+        <div class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header id="home" class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Taste the <br> <span class="gradient-text">Future of Dining</span>
+            </h1>
+            <p class="hero-subtitle">
+                Real-time food availability, smart trend detection, and trusted reviews. 
+                Experience the smartest way to dine out.
+            </p>
+            <div class="hero-cta">
+                <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Start Exploring <i class="fas fa-arrow-right"></i></a>
+                <a href="#features" class="btn btn-glass btn-lg">Learn More</a>
+            </div>
+            
+            <div class="stats-glass">
+                <div class="stat-item">
+                    <h3>50+</h3>
+                    <p>Restaurants</p>
+                </div>
+                <div class="stat-separator"></div>
+                <div class="stat-item">
+                    <h3>99%</h3>
+                    <p>Accuracy</p>
+                </div>
+                <div class="stat-separator"></div>
+                <div class="stat-item">
+                    <h3>24/7</h3>
+                    <p>Live Updates</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hero-visual">
+            <div class="glass-card hero-card floating-anim">
+                <div class="card-header">
+                    <img src="https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" alt="Food" class="food-img">
+                    <div class="status-badge available">
+                        <i class="fas fa-check-circle"></i> Available Now
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h4>Signature Pasta</h4>
+                    <p>Trending 🔥</p>
+                </div>
+            </div>
+             <div class="glass-card hero-card small-card floating-anim-delayed">
+                <div class="card-body">
+                    <i class="fas fa-chart-line accent-icon"></i>
+                    <h4>Smart Trends</h4>
+                    <p>AI Analyzed</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="section-header">
+            <span class="badge">Innovation</span>
+            <h2>Why Choose <span class="gradient-text">Deliciae?</span></h2>
+        </div>
+        
+        <div class="features-grid">
+            <!-- Feature 1 -->
+            <div class="glass-card feature-card">
+                <div class="icon-box">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <h3>Real-Time Availability</h3>
+                <p>Never fall in love with a sold-out dish again. Get live updates directly from the kitchen.</p>
+            </div>
+            
+            <!-- Feature 2 -->
+            <div class="glass-card feature-card">
+                <div class="icon-box">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <h3>Smart Trend Detection</h3>
+                <p>Discover what's hot right now. Our AI analyzes orders and views to tell you what's trending.</p>
+            </div>
+            
+            <!-- Feature 3 -->
+            <div class="glass-card feature-card">
+                <div class="icon-box">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3>Fake Review Shield</h3>
+                <p>Trust what you read. Advanced NLP filters out fake reviews to give you the honest truth.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="steps-section">
+        <div class="section-header">
+            <h2>How It Works</h2>
+        </div>
+        <div class="steps-container">
+            <div class="step-item">
+                <div class="step-number">01</div>
+                <h3>Search</h3>
+                <p>Find your favorite dishes or restaurants.</p>
+            </div>
+            <div class="step-item">
+                <div class="step-number">02</div>
+                <h3>Check</h3>
+                <p>See live availability and trend status.</p>
+            </div>
+            <div class="step-item">
+                <div class="step-number">03</div>
+                <h3>Dine</h3>
+                <p>Order with confidence and enjoy.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="glass-footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <h3>Deliciae</h3>
+                <p>Elevating your dining experience with AI.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Restaurant Partner</a>
+            </div>
+            <div class="social-links">
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 Deliciae. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'js/script.js' %}"></script>
+</body>
+</html>

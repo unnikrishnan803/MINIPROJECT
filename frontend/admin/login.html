@@ -1,0 +1,66 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block bodyclass %}{{ block.super }} login{% endblock %}
+
+{% block usertools %}{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+    
+    <!-- Background glow effects from main site -->
+    <div class="glow-bg top-left"></div>
+    <div class="glow-bg bottom-right"></div>
+
+    <div id="content-main">
+        <div class="glass-card" style="text-align: center; padding: 2rem;">
+            <h2 style="margin-bottom: 2rem; color: var(--text-primary);"><i class="fas fa-lock" style="color: var(--accent-primary);"></i> Admin Access</h2>
+
+            {% if form.errors and not form.non_field_errors %}
+                <p class="errornote">
+                    {% if form.errors.items|length == 1 %}{% translate "Please correct the error below." %}{% else %}{% translate "Please correct the errors below." %}{% endif %}
+                </p>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+                {% for error in form.non_field_errors %}
+                    <p class="errornote">
+                        {{ error }}
+                    </p>
+                {% endfor %}
+            {% endif %}
+
+            <form action="{{ app_path }}" method="post" id="login-form">{% csrf_token %}
+                <div class="form-row">
+                    {{ form.username.errors }}
+                    <label for="id_username" class="form-label" style="text-align: left; display: block; margin-bottom: 5px;">{{ form.username.label_tag }}</label>
+                    {{ form.username }}
+                </div>
+                <div class="form-row">
+                    {{ form.password.errors }}
+                    <label for="id_password" class="form-label" style="text-align: left; display: block; margin-bottom: 5px;">{{ form.password.label_tag }}</label>
+                    {{ form.password }}
+                    <input type="hidden" name="next" value="{{ next }}">
+                </div>
+                
+                {% url 'admin_password_reset' as password_reset_url %}
+                {% if password_reset_url %}
+                <div class="password-reset-link" style="margin-bottom: 20px; text-align: right;">
+                    <a href="{{ password_reset_url }}">{% translate 'Forgotten your password or username?' %}</a>
+                </div>
+                {% endif %}
+                
+                <div class="submit-row">
+                    <input type="submit" value="{% translate 'Log in' %}" class="button" style="width: 100%;">
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
