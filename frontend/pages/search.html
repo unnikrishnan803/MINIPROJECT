@@ -1,0 +1,281 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results - Deliciae</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        secondary: '#FFC107',
+                        dark: '#0f0f0f',
+                        glass: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    fontFamily: {
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <!-- <link rel="stylesheet" href="{% static 'css/dashboard.css' %}"> -->
+    <style>
+        body { 
+            background: #0f0f0f; 
+            color: white;
+            font-family: 'Outfit', sans-serif;
+        }
+        
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f0f0f; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #FF6B35, #FFC107);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-black via-[#0f0f0f] to-[#1a1a1a]">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        {% include 'components/sidebar.html' %}
+        
+        <!-- Main Content -->
+        <main class="flex-1 ml-[240px] w-[calc(100%-240px)]">
+            <div class="max-w-6xl mx-auto px-6 py-12">
+                
+                <!-- Search Header -->
+                <div class="mb-10">
+                    <h1 class="text-4xl font-bold mb-2">
+                        Search Results for <span class="text-[#FF6B35] italic">"{{ query }}"</span>
+                    </h1>
+                    <p class="text-gray-400 text-lg">
+                        Found {{ restaurants|length }} Restaurants • {{ food_items|length }} Items
+                    </p>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex gap-4 mb-10 overflow-x-auto pb-2">
+                    <button class="bg-[#FF6B35] text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-orange-500/20 transition hover:scale-105">
+                        All
+                    </button>
+                    <button class="bg-[#1a1a1a] border border-white/10 text-gray-300 px-6 py-2.5 rounded-xl font-medium hover:bg-[#252525] hover:text-white transition">
+                        Restaurants
+                    </button>
+                    <button class="bg-[#1a1a1a] border border-white/10 text-gray-300 px-6 py-2.5 rounded-xl font-medium hover:bg-[#252525] hover:text-white transition">
+                        Dishes
+                    </button>
+                    <button class="bg-[#1a1a1a] border border-white/10 text-gray-300 px-6 py-2.5 rounded-xl font-medium hover:bg-[#252525] hover:text-white transition">
+                        Top Rated
+                    </button>
+                </div>
+
+                <!-- Restaurants Grid -->
+                {% if restaurants %}
+                <div class="mb-16">
+                    <div class="flex items-center justify-between mb-8">
+                        <h2 class="text-2xl font-bold flex items-center gap-3">
+                            <span class="w-1 h-8 bg-[#FF6B35] rounded-full"></span>
+                            Restaurants
+                        </h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                        {% for restaurant in restaurants %}
+                        <!-- Premium Restaurant Card -->
+                        <div class="group bg-[#151515] border border-white/5 rounded-2xl overflow-hidden shadow-xl hover:-translate-y-2 hover:shadow-2xl hover:border-[#FF6B35]/30 transition duration-300 animate-fade-up" style="animation-delay: {{ forloop.counter }}00ms;">
+                            
+                            <!-- Image Container -->
+                            <div class="relative h-56 overflow-hidden">
+                                <img src="{{ restaurant.image_url|default:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60' }}" 
+                                     alt="{{ restaurant.name }}" 
+                                     class="w-full h-full object-cover transform group-hover:scale-110 transition duration-700">
+                                
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
+                                
+                                <div class="absolute top-4 right-4 flex gap-2">
+                                    <span class="bg-black/40 backdrop-blur-md border border-white/10 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                                        <i class="fas fa-clock text-[#FF6B35] mr-1"></i> {{ restaurant.opening_time|default:"10:00" }} - {{ restaurant.closing_time|default:"22:00" }}
+                                    </span>
+                                </div>
+
+                                <div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                    <div>
+                                        {% if restaurant.rating >= 4.5 %}
+                                        <span class="bg-[#FF6B35] text-white text-[10px] font-bold px-2 py-0.5 rounded mb-2 inline-block shadow-lg">
+                                            TOP RATED
+                                        </span>
+                                        {% endif %}
+                                        <h3 class="text-xl font-bold text-white leading-tight group-hover:text-[#FF6B35] transition-colors">
+                                            {{ restaurant.name }}
+                                        </h3>
+                                    </div>
+                                    <div class="bg-green-600/90 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-sm font-bold flex items-center gap-1 shadow-lg">
+                                        {{ restaurant.rating|default:"4.5" }} <i class="fas fa-star text-xs"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="p-6">
+                                <div class="flex items-center justify-between text-sm text-gray-400 mb-4">
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fas fa-map-pin text-[#FF6B35]"></i> {{ restaurant.location }}
+                                    </span>
+                                    <span class="w-1 h-1 bg-gray-600 rounded-full"></span>
+                                    <span>{{ restaurant.cuisine_type|default:"Multi-cuisine" }}</span>
+                                </div>
+
+                                <!-- Stats Grid -->
+                                <div class="grid grid-cols-3 gap-2 py-4 border-t border-white/5 border-b mb-5">
+                                    <div class="text-center">
+                                        <div class="text-white font-bold text-lg">{{ restaurant.menu_count }}</div>
+                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Items</div>
+                                    </div>
+                                    <div class="text-center border-l border-white/5">
+                                        <div class="text-white font-bold text-lg">{{ restaurant.reels_count }}</div>
+                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Posts</div>
+                                    </div>
+                                    <div class="text-center border-l border-white/5">
+                                        <div class="text-white font-bold text-lg">{{ restaurant.followers_count }}</div>
+                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Followers</div>
+                                    </div>
+                                </div>
+
+                                <a href="{% url 'restaurant_profile' restaurant.id %}" class="w-full bg-white/5 hover:bg-[#FF6B35] text-white font-medium py-3 rounded-xl transition duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-orange-500/20">
+                                    View Restaurant <i class="fas fa-arrow-right text-sm opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Food Items Grid -->
+                {% if food_items %}
+                <div class="mb-16">
+                    <div class="flex items-center justify-between mb-8">
+                        <h2 class="text-2xl font-bold flex items-center gap-3">
+                            <span class="w-1 h-8 bg-green-500 rounded-full"></span>
+                            Dishes
+                        </h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {% for item in food_items %}
+                        <div class="bg-[#151515] border border-white/5 rounded-2xl overflow-hidden hover:border-gray-600 transition group relative animate-fade-up" style="animation-delay: {{ forloop.counter }}00ms;">
+                            <div class="h-48 overflow-hidden relative">
+                                <img src="{{ item.image_url|default:'https://source.unsplash.com/random/300x300/?food' }}" alt="{{ item.name }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                                <button class="absolute bottom-3 right-3 bg-white text-black w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-[#FF6B35] hover:text-white transition">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                {% if item.price_discount %}
+                                <div class="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+                                    -{{ item.discount }}%
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="p-4">
+                                <div class="flex justify-between items-start mb-1">
+                                    <h3 class="font-bold text-white group-hover:text-[#FF6B35] transition-colors truncate">{{ item.name }}</h3>
+                                    <div class="text-[#FF6B35] font-bold">₹{{ item.price }}</div>
+                                </div>
+                                <p class="text-xs text-gray-500 mb-3 flex items-center gap-1">
+                                    <i class="fas fa-store"></i> {{ item.restaurant_name }}
+                                </p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- No Results -->
+                {% if not restaurants and not food_items %}
+                <div class="text-center py-24 bg-[#151515] rounded-3xl border border-dashed border-gray-800">
+                    <div class="bg-white/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-search text-4xl text-gray-600"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">No results found</h3>
+                    <p class="text-gray-400 mb-8 max-w-md mx-auto">We couldn't find anything matching "<span class="text-white">{{ query }}</span>". Try searching for something else.</p>
+                    <a href="{% url 'home' %}" class="bg-[#FF6B35] text-white px-8 py-3 rounded-xl font-medium hover:bg-orange-600 transition shadow-lg shadow-orange-500/20">
+                        Back to Home
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    <style>
+        /* Animation Keyframes */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .animate-fade-up {
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0; /* Start hidden */
+        }
+        
+        .animate-scale-in {
+            animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+
+    <!-- Modals -->
+    <div id="restaurantProfileModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center alpha-animation">
+        <div class="bg-[#151515] border border-gray-800 rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[90vh]">
+            
+            <!-- Close Button (Absolute Top Right) -->
+            <div class="absolute top-4 right-4 z-10">
+                <button onclick="document.getElementById('restaurantProfileModal').style.display='none'" class="bg-black/50 hover:bg-[#FF6B35] text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors backdrop-blur-sm">
+                    &times;
+                </button>
+            </div>
+
+            <div id="profile-header" class="p-0"></div>
+            <div id="profile-body" class="overflow-y-auto custom-scrollbar flex-1 bg-[#151515]"></div>
+        </div>
+    </div>
+    
+    <!-- Scripts (Versioned to force reload) -->
+    <script src="{% static 'js/location.js' %}?v=2.0"></script>
+    <script src="{% static 'js/script.js' %}?v=2.1"></script>
+</body>
+</html>

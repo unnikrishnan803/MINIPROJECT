@@ -143,12 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const rating = rest.rating || 'N/A';
 
             card.innerHTML = `
-                <div class="card-img-container" style="cursor: pointer;" onclick="openRestaurantProfile(${rest.id})">
+                <div class="card-img-container" style="cursor: pointer;" onclick="window.location.href='/restaurant/${rest.id}/'">
                     <img src="${imgUrl}" alt="${rest.name}" style="height: 150px; object-fit: cover;">
                     <div class="badge" style="top:10px; right:10px; background: rgba(0,0,0,0.7);"><i class="fas fa-star" style="color:gold;"></i> ${rating}</div>
                 </div>
                 <div class="card-details">
-                    <h4 style="cursor: pointer;" onclick="openRestaurantProfile(${rest.id})">${rest.name}</h4>
+                    <h4 style="cursor: pointer;" onclick="window.location.href='/restaurant/${rest.id}/'">${rest.name}</h4>
                     <p class="restaurant-name" style="color: var(--accent-primary);">${cuisine}</p>
                     <div class="card-meta">
                          <span><i class="fas fa-map-marker-alt"></i> ${loc}</span>
@@ -247,8 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnState = isAvailable && quantity > 0 ? '' : 'disabled';
         const btnText = isAvailable && quantity > 0 ? 'Order Now' : 'Unavailable';
         
-        // Smart Image Matching
-        const imgUrl = item.image_url || getFoodImage(item.name);
+        // Smart Image Matching - prioritize uploaded image
+        const imgUrl = item.image || item.image_url || getFoodImage(item.name);
         
         // Media Content (Image or Video)
         let mediaContent;
@@ -451,6 +451,8 @@ window.showDashboardSection = function(sectionId) {
     document.getElementById('reels-view').style.display = 'none';
     const ordersView = document.getElementById('orders-view');
     if(ordersView) ordersView.style.display = 'none';
+    const settingsView = document.getElementById('settings-view');
+    if(settingsView) settingsView.style.display = 'none';
     
     document.getElementById(sectionId).style.display = 'block';
     
@@ -458,7 +460,8 @@ window.showDashboardSection = function(sectionId) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     if(sectionId === 'home-view') document.querySelector('.nav-item:nth-child(1)').classList.add('active');
     if(sectionId === 'reels-view') document.querySelector('.nav-item:nth-child(2)').classList.add('active');
-    if(sectionId === 'orders-view') document.querySelector('.nav-item:nth-child(5)').classList.add('active');
+    if(sectionId === 'orders-view') document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+    if(sectionId === 'settings-view') document.querySelector('.nav-item:nth-child(4)').classList.add('active');
 }
 
 // 2. Reels Logic
@@ -654,172 +657,143 @@ window.shareReel = function(reelId) {
 
 
 // 3. Restaurant Profile Logic
-window.openRestaurantProfile = async function(id) {
-    const modal = document.getElementById('restaurantProfileModal');
-    const header = document.getElementById('profile-header');
-    const body = document.getElementById('profile-body');
-    
-    modal.style.display = 'block';
-    header.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Profile...';
-    body.innerHTML = '';
+// 3. Restaurant Profile Logic (Redirect to new page)
+window.openRestaurantProfile = function(id) {
+    window.location.href = `/restaurant/${id}/`;
+};
 
-    try {
-        // Fetch Restaurant Details (reuse list endpoint with filter or new detail endpoint?)
-        // Assuming we can get detail from ID: /api/restaurants/?id=X or just filter
-        // Better: create detail endpoint or just find from cached list locally? 
-        // Let's assume list for now or fetch specific.
-        // Actually RestaurantViewSet supports retrieving by ID: /api/restaurants/ID/ if it's ModelViewSet or similar.
-        // My RestaurantListView is ListAPIView. 
-        // I might need to update backend to support Detail View? 
-        // Or just use the existing list API and filter in JS if data is there?
-        // But for fresh stats (followers), better to fetch.
-        // Wait, RestaurantListView is ListAPIView. It doesn't support /id/ retrieval by default unless configured.
-        // I'll assume I can fetch list with ?search=NAME or similar, or better: 
-        // I should have added a RetrieveAPIView or ViewSet.
-        // For now, let's use the list endpoint with a filter if possible, or just hack it:
-        // Actually I can just fetch all and find? No inefficient.
-        // I will add a quick detail view logic or just assume I can pass data?
-        // Let's add `Retrieve` to `RestaurantListView`? No.
-        // I will use client side data from the click if possible, but stats need fetch.
-        // Lets try fetching from `/api/restaurants/?search=` and hope name is unique? Risky.
-        // *Self-Correction*: I should have added a Detail View. 
-        // **Workaround**: I will use a simple fetch to `/api/restaurants/` (list) and find the ID in JS. Not ideal but works for small app.
-        
-        const res = await fetch('/api/restaurants/'); // This is inefficient for real app
-        const all = await res.json();
-        const restaurant = (all.results || all).find(r => r.id == id);
-        
-        if (!restaurant) throw new Error("Restaurant not found");
-        
-        // Render Header
-        const isFollowing = restaurant.is_following;
-        const btnText = isFollowing ? 'Following' : 'Follow';
-        const btnClass = isFollowing ? 'btn-secondary' : 'btn-primary';
-        
-        header.innerHTML = `
-            <img src="${restaurant.image_url || 'https://placehold.co/100'}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent-primary); margin-bottom: 1rem;">
-            <h2 style="margin-bottom: 0.5rem;">${restaurant.name} <i class="fas fa-check-circle" style="color: #3498db; font-size: 1rem;"></i></h2>
-            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">${restaurant.cuisine_type} • ${restaurant.location}</p>
-            
-            <div style="display: flex; justify-content: center; gap: 3rem; margin-bottom: 1.5rem;">
-                <div style="text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: 700;">${restaurant.stats.posts}</div>
-                    <div style="font-size: 0.8rem; opacity: 0.7;">Posts</div>
+// --- TAB SWITCHING (Refined) ---
+
+// --- TAB SWITCHING (Refined) ---
+window.switchProfileTab = function(tab, btn) {
+    const content = document.getElementById('profileTabContent');
+    const tabs = document.querySelectorAll('#profileTabsHeader button');
+    
+    // Update Tab Styles
+    tabs.forEach(t => {
+        t.className = 'flex-1 pb-4 text-gray-500 font-medium hover:text-white transition-colors focus:outline-none border-b-2 border-transparent';
+    });
+    btn.className = 'flex-1 pb-4 text-[#FF6B35] font-medium border-b-2 border-[#FF6B35] transition-colors focus:outline-none';
+    
+    // Animate Content Out/In
+    content.style.opacity = '0';
+    content.style.transform = 'translateY(10px)';
+    
+    setTimeout(() => {
+        if(tab === 'posts') {
+            renderProfilePosts(window.currentProfileData.posts, content);
+        } else if (tab === 'menu') {
+            renderProfileMenu(window.currentProfileData.menu, content);
+        } else if (tab === 'reviews') {
+             content.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-12 text-gray-500">
+                     <div class="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center text-2xl mb-4 text-gray-400">
+                        <i class="far fa-comment-alt"></i>
+                    </div>
+                    <p class="text-lg font-medium">No reviews yet</p>
+                    <p class="text-sm opacity-60">Be the first to review this place!</p>
                 </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: 700;" id="follower-count-${id}">${restaurant.stats.followers}</div>
-                    <div style="font-size: 0.8rem; opacity: 0.7;">Followers</div>
+            `;
+        }
+        
+        // Animate In
+        content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        content.style.opacity = '1';
+        content.style.transform = 'translateY(0)';
+    }, 200);
+}
+
+// --- RENDER FUNCTIONS (Premium Grid) ---
+function renderProfilePosts(posts, container) {
+    if(!posts || posts.length === 0) {
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+                <div class="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center text-4xl mb-4 text-gray-600">
+                    <i class="fas fa-camera"></i>
                 </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.5rem; font-weight: 700;">${restaurant.rating}</div>
-                    <div style="font-size: 0.8rem; opacity: 0.7;">Rating</div>
+                <p class="text-lg font-medium text-white">No posts yet</p>
+                <p class="text-sm text-gray-600">This restaurant hasn’t shared any reels yet.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="grid grid-cols-3 gap-1">'; // Instagram style tight grid
+    posts.forEach(p => {
+        html += `
+            <div class="aspect-[9/16] bg-gray-900 relative cursor-pointer group overflow-hidden" onclick="openVideoModal('${p.video_url}')">
+                <video src="${p.video_url}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700"></video>
+                <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
+                
+                <div class="absolute bottom-2 left-2 text-white text-xs font-bold flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <i class="fas fa-heart"></i> ${p.likes_count || 0}
+                </div>
+                 <div class="absolute top-2 right-2 text-white text-lg opacity-0 group-hover:opacity-100 transition-transform transform translate-y-2 group-hover:translate-y-0">
+                    <i class="fas fa-play-circle"></i>
                 </div>
             </div>
-            
-            <button class="btn ${btnClass} btn-sm" onclick="followRestaurant(${id}, this)">${btnText}</button>
-            <button class="btn btn-glass btn-sm"><i class="fas fa-paper-plane"></i> Message</button>
         `;
-        
-        // Save current restaurant for tab switching
-        window.currentProfileId = id;
-        switchProfileTab('posts'); // Default load posts
-        
-    } catch (err) {
-        console.error(err);
-        header.innerHTML = 'Error loading profile.';
-    }
+    });
+    html += '</div>';
+    container.innerHTML = html;
 }
 
-window.followRestaurant = async function(id, btn) {
-    // Optimistic
-    const isFollowing = btn.textContent.trim() === 'Following';
-    const countEl = document.getElementById(`follower-count-${id}`);
-    
-    if (isFollowing) {
-        btn.textContent = 'Follow';
-        btn.className = 'btn btn-primary btn-sm';
-        if(countEl) countEl.textContent = parseInt(countEl.textContent) - 1;
-    } else {
-        btn.textContent = 'Following';
-        btn.className = 'btn btn-secondary btn-sm';
-        if(countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
-    }
-    
-    try {
-        await fetch('/api/follow/toggle/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ restaurant_id: id })
-        });
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-window.switchProfileTab = async function(tab) {
-    const body = document.getElementById('profile-body');
-    const links = document.querySelectorAll('.tab-link');
-    links.forEach(l => l.classList.remove('active'));
-    
-    if(tab === 'posts') {
-        links[0].classList.add('active');
-        body.innerHTML = '<div style="padding:10px;"><i class="fas fa-spinner fa-spin"></i> Loading Posts...</div>';
-        // Fetch Reels for this restaurant
-        // Assuming filtered endpoint or filtering in JS. 
-        // Note: Backend ReelViewSet didn't explicitly implement filter by restaurant, but standard ModelViewSet might support ?restaurant=ID if filter backend enabled.
-        // If not, I'll filter client side from all reels (inefficient but OK for prototype).
-        const res = await fetch('/api/reels/');
-        const data = await res.json();
-         // Filter manually since I didn't add DjangoFilterBackend
-        const posts = data.filter(r => r.restaurant == window.currentProfileId);
-        
-        if(posts.length === 0) {
-            body.innerHTML = '<div style="text-align:center; padding: 40px; color:gray;">No posts yet.</div>';
-            return;
-        }
-        
-        let html = '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">';
-        posts.forEach(p => {
-            html += `
-                <div style="aspect-ratio: 9/16; background: #000; position: relative; cursor: pointer;">
-                    <video src="${p.video_url}" style="width: 100%; height: 100%; object-fit: cover;"></video>
+function renderProfileMenu(menu, container) {
+    if(!menu || menu.length === 0) {
+        container.innerHTML = `
+             <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+                <div class="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center text-4xl mb-4 text-gray-600">
+                    <i class="fas fa-utensils"></i>
                 </div>
-            `;
-        });
-        html += '</div>';
-        body.innerHTML = html;
-        
-    } else {
-        links[1].classList.add('active');
-        body.innerHTML = '<div style="padding:10px;"><i class="fas fa-spinner fa-spin"></i> Loading Menu...</div>';
-        // Fetch Menu
-        const res = await fetch('/api/food-items/'); // Retrieve all and filter
-        const data = await res.json();
-        const menu = (data.results || data).filter(f => f.restaurant.id == window.currentProfileId);
-        
-        if(menu.length === 0) {
-            body.innerHTML = '<div style="text-align:center; padding: 40px; color:gray;">No menu items found.</div>';
-            return;
-        }
-        
-        let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
-        menu.forEach(item => {
-            html += `
-                <div class="glass-card" style="padding: 1rem; display: flex; gap: 1rem; align-items: center;">
-                    <img src="${item.image_url || 'https://placehold.co/80'}" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover;">
-                    <div>
-                        <h4>${item.name}</h4>
-                        <div style="color: var(--accent-primary); font-weight: bold;">₹${item.price}</div>
+                <p class="text-lg font-medium text-white">Menu Unavailable</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+    menu.forEach(item => {
+        html += `
+            <div class="bg-[#1e1e1e] p-4 rounded-xl flex gap-4 hover:bg-[#252525] transition-colors border border-white/5 group">
+                <div class="w-20 h-20 rounded-lg overflow-hidden shrink-0">
+                     <img src="${item.image_url || 'https://placehold.co/80'}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-start mb-1">
+                        <h4 class="font-medium text-white truncate pr-2">${item.name}</h4>
+                        <span class="text-[#FF6B35] font-bold text-sm">₹${item.price}</span>
+                    </div>
+                    <p class="text-gray-500 text-xs line-clamp-2 mb-2 h-8">${item.description || 'No description available.'}</p>
+                    
+                    <div class="flex justify-between items-center">
+                         <span class="text-[10px] px-2 py-0.5 rounded-full ${item.is_available ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}">
+                            ${item.is_available ? 'Available' : 'Sold Out'}
+                        </span>
+                        <button class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-[#FF6B35] hover:text-white transition-colors shadow-lg transform active:scale-95" onclick="addToCart(${item.id})">
+                            <i class="fas fa-plus text-xs"></i>
+                        </button>
                     </div>
                 </div>
-            `;
-        });
-        html += '</div>';
-        body.innerHTML = html;
-    }
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
 }
 
-// Utility for CSRF
+// Add openVideoModal helper if not exists
+window.openVideoModal = function(url) {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; display:flex; align-items:center; justify-content:center;';
+    modal.innerHTML = `
+        <div style="position:relative; width:90%; max-width:500px; aspect-ratio:9/16;">
+            <button onclick="this.closest('div').parentElement.remove()" style="position:absolute; top:-40px; right:-10px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
+            <video src="${url}" controls autoplay style="width:100%; height:100%; border-radius:10px;"></video>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -908,11 +882,213 @@ async function fetchBookings() {
         
     } catch (error) {
         console.error('Error fetching bookings:', error);
-        container.innerHTML = `
-            <div class="glass-card" style="padding: 2rem; text-align: center;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #e74c3c; margin-bottom: 1rem;"></i>
-                <p style="color: #e74c3c;">Failed to load bookings. Please try again later.</p>
-            </div>
-        `;
+        container.innerHTML = `<div style="color:red; text-align:center; padding:20px;">Failed to load bookings.</div>`;
     }
 }
+
+// --- REEL UPLOAD LOGIC ---
+function openUploadReelModal() {
+    document.getElementById('uploadReelModal').style.display = 'block';
+}
+
+function closeUploadReelModal() {
+    document.getElementById('uploadReelModal').style.display = 'none';
+}
+
+async function handleReelUpload(event) {
+    event.preventDefault();
+    
+    const fileInput = document.getElementById('reelVideoFile');
+    const captionInput = document.getElementById('reelCaption');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a video file.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('video_file', file);
+    formData.append('caption', captionInput.value);
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = 'Uploading...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/reels/upload/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Upload failed');
+        }
+        
+        const data = await response.json();
+        alert('Reel uploaded successfully!');
+        closeUploadReelModal();
+        event.target.reset();
+        
+        // Refresh reels if on reels view
+        if (typeof currentSection !== 'undefined' && currentSection === 'reels-view') {
+           if(typeof fetchReels !== 'undefined') fetchReels();
+        }
+        
+    } catch (error) {
+        console.error('Error uploading reel:', error);
+        alert('Failed to upload reel: ' + error.message);
+    } finally {
+        submitBtn.innerText = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// --- BOOKING MODAL LOGIC ---
+window.openBookingModal = function(restaurantId, restaurantName) {
+    const modal = document.getElementById('bookingModal');
+    const nameEl = document.getElementById('bookingRestaurantName');
+    const idInput = document.getElementById('bookingRestaurantId');
+    const dateInput = document.getElementById('bookingDateTime');
+    
+    if(modal) modal.style.display = 'block';
+    if(nameEl) nameEl.textContent = "Booking at " + restaurantName;
+    if(idInput) idInput.value = restaurantId;
+    
+    // Default to next hour
+    const now = new Date();
+    now.setHours(now.getHours() + 1);
+    now.setMinutes(0);
+    const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    if(dateInput) dateInput.value = localIso;
+
+    // Fetch and Populate Tables
+    fetchTablesForRestaurant(restaurantId);
+}
+
+async function fetchTablesForRestaurant(restaurantId) {
+    const tableSelect = document.getElementById('bookingTable');
+    if (!tableSelect) return;
+    
+    tableSelect.innerHTML = '<option value="">Loading tables...</option>';
+    
+    try {
+        // Fetch tables for this restaurant
+        const response = await fetch(`/api/tables/?restaurant=${restaurantId}`);
+        if (!response.ok) throw new Error('Failed to fetch tables');
+        
+        const tables = await response.json();
+        
+        // Filter available tables (though backend might return all, user can select any)
+        // Ideally we should filter by status or availability, but for now list all.
+        // Or filtering by 'Available' status if the model has it.
+        const availableTables = (tables.results || tables).filter(t => t.status === 'Available');
+        
+        if (availableTables.length === 0) {
+             tableSelect.innerHTML = '<option value="">Any Available Table</option>';
+             return;
+        }
+        
+        tableSelect.innerHTML = '<option value="">Select a Table (Optional)</option>';
+        availableTables.forEach(table => {
+            const option = document.createElement('option');
+            option.value = table.id;
+            option.textContent = `Table ${table.table_number} (${table.capacity} ppl)`;
+            tableSelect.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.warn('Could not fetch tables:', error);
+        tableSelect.innerHTML = '<option value="">Any Available Table</option>';
+    }
+}
+
+window.closeBookingModal = function() {
+    const modal = document.getElementById('bookingModal');
+    if(modal) modal.style.display = 'none';
+}
+
+window.handleBookingSubmit = async function(event) {
+    event.preventDefault();
+    
+    const restaurantId = document.getElementById('bookingRestaurantId').value;
+    const dateTime = document.getElementById('bookingDateTime').value;
+    const people = document.getElementById('bookingPeople').value;
+    const table = document.getElementById('bookingTable').value; // Optional
+    
+    // Validate inputs
+    if (!restaurantId || !dateTime || !people) {
+        alert("Please fill in all required fields.");
+        return;
+    }
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = 'Booking...';
+    submitBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/bookings/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                restaurant: restaurantId,
+                date_time: dateTime,
+                people_count: people,
+                table: table || null
+            })
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Booking failed');
+        }
+        
+        const data = await response.json();
+        alert('Booking Confirmed! ✅\nWe look forward to serving you.');
+        closeBookingModal();
+        event.target.reset();
+        
+        // Refresh bookings if on orders/bookings view
+        // if(typeof fetchBookings === 'function') fetchBookings(); 
+        
+    } catch (error) {
+        console.error('Error creating booking:', error);
+        alert('Failed to book: ' + error.message);
+    } finally {
+        submitBtn.innerText = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Close modal when clicking outside (Unified)
+window.onclick = function(event) {
+    const reelModal = document.getElementById('uploadReelModal');
+    const bookingModal = document.getElementById('bookingModal');
+    const addFoodModal = document.getElementById('addFoodModal');
+    const profileModal = document.getElementById('restaurantProfileModal'); // If exists
+
+    if (event.target == reelModal) {
+        if(typeof closeUploadReelModal === 'function') closeUploadReelModal();
+    }
+    if (event.target == bookingModal) {
+        closeBookingModal();
+    }
+    if (event.target == addFoodModal) {
+        if(typeof closeAddFoodModal === 'function') closeAddFoodModal();
+    }
+    // Also handle profile modal if it's a click-outside closer
+    if (profileModal && event.target == profileModal) {
+        profileModal.style.display = 'none';
+        // Cleanup if needed
+    }
+}
+

@@ -16,7 +16,7 @@ class RestaurantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Restaurant
-        fields = ['id', 'name', 'cuisine_type', 'location', 'rating', 'image_url', 'currency_symbol', 'stats', 'is_following']
+        fields = ['id', 'name', 'cuisine_type', 'location', 'rating', 'image_url', 'currency_symbol', 'stats', 'is_following', 'latitude', 'longitude', 'is_open', 'opening_time', 'closing_time']
 
     def get_stats(self, obj):
         return {
@@ -94,7 +94,7 @@ class FoodItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodItem
         fields = [
-            'id', 'name', 'description', 'price', 'category', 'image_url', 'video_url', 
+            'id', 'name', 'description', 'price', 'category', 'image', 'image_url', 'video_url', 
             'is_available', 'trend_score', 'restaurant', 'currency_symbol',
             'quantity_available', 'estimated_sellout_time', 'popularity_score', 'preparation_time'
         ]
@@ -129,6 +129,7 @@ class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = ['id', 'customer', 'customer_name', 'restaurant', 'table', 'table_number', 'date_time', 'people_count', 'status']
+        read_only_fields = ['customer', 'status']
 
 class OrderSerializer(serializers.ModelSerializer):
     # Nested Items for display

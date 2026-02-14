@@ -213,9 +213,9 @@
                     <input type="number" id="newItemPrice" class="form-input" placeholder="10.00">
                 </div>
                 <div class="form-group">
-                    <label>Video URL (Optional)</label>
-                    <input type="url" id="newItemVideo" class="form-input" placeholder="https://example.com/video.mp4">
-                    <small style="color: rgba(255,255,255,0.5); font-size: 0.7rem;">Direct link to MP4 or WebM video.</small>
+                    <label>Dish Image</label>
+                    <input type="file" id="newItemImage" class="form-input" accept="image/*">
+                    <small style="color: rgba(255,255,255,0.5); font-size: 0.7rem;">Upload a photo of your dish (JPG, PNG)</small>
                 </div>
                 <button type="button" class="btn btn-primary btn-full" onclick="addFoodItem()">Add Item</button>
             </form>
@@ -258,9 +258,9 @@
             <h2>Upload New Reel 🎥</h2>
             <form onsubmit="event.preventDefault(); uploadReel();">
                 <div class="form-group">
-                    <label>Video URL</label>
-                    <input type="url" id="reelVideoUrl" class="form-input" placeholder="https://example.com/my-video.mp4" required>
-                    <small style="color: rgba(255,255,255,0.5);">Direct link to MP4/WebM video.</small>
+                    <label>Video File</label>
+                    <input type="file" id="reelVideoFile" class="form-input" accept="video/*" required>
+                    <small style="color: rgba(255,255,255,0.5);">Upload MP4 or WebM video file</small>
                 </div>
                 <div class="form-group">
                     <label>Caption</label>
@@ -273,32 +273,33 @@
 
     <script>
         async function addFoodItem() {
-            const name = document.querySelector('#addFoodModal input[placeholder="e.g. Seafood Pasta"]').value;
-            const category = document.querySelector('#addFoodModal select').value;
-            const price = document.querySelector('#addFoodModal input[placeholder="10.00"]').value;
-            const videoUrl = document.getElementById('newItemVideo').value;
+            const name = document.getElementById('newItemName').value;
+            const category = document.getElementById('newItemCategory').value;
+            const price = document.getElementById('newItemPrice').value;
+            const imageFile = document.getElementById('newItemImage').files[0];
 
             if(!name || !price) {
                 alert("Please fill in Name and Price");
                 return;
             }
 
-            const payload = {
-                name: name,
-                category: category,
-                price: price,
-                video_url: videoUrl,
-                is_available: true
-            };
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('category', category);
+            formData.append('price', price);
+            formData.append('is_available', true);
+            
+            if(imageFile) {
+                formData.append('image', imageFile);
+            }
 
             try {
                 const res = await fetch('/api/food-items/', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken')
                     },
-                    body: JSON.stringify(payload)
+                    body: formData
                 });
 
                 if(res.ok) {
@@ -395,10 +396,12 @@
                 
                 items.forEach(item => {
                     const tr = document.createElement('tr');
+                    // Prioritize uploaded image over image_url
+                    const imageUrl = item.image || item.image_url || 'https://via.placeholder.com/100';
                     tr.innerHTML = `
                         <td>
                             <div class="item-cell">
-                                <img src="${item.image_url || 'https://via.placeholder.com/100'}" alt="Img" onerror="this.src='https://via.placeholder.com/100'">
+                                <img src="${imageUrl}" alt="Img" onerror="this.src='https://via.placeholder.com/100'">
                                 <span>${item.name}</span>
                             </div>
                         </td>
@@ -606,33 +609,33 @@
         }
 
         async function uploadReel() {
-            const videoUrl = document.getElementById('reelVideoUrl').value;
+            const videoFile = document.getElementById('reelVideoFile').files[0];
             const caption = document.getElementById('reelCaption').value;
             
-            if(!videoUrl) return alert("Video URL is required");
+            if(!videoFile) return alert("Video file is required");
 
             const btn = document.querySelector('#addReelModal button[type="submit"]');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
             btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('video_file', videoFile);
+            formData.append('caption', caption);
 
             try {
                 const res = await fetch('/api/reels/', {
                      method: 'POST',
                      headers: { 
-                        'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken')
                      },
-                     body: JSON.stringify({
-                        video_url: videoUrl,
-                        caption: caption
-                     })
+                     body: formData
                 });
                 
                 if(res.ok) {
                     alert("Reel Posted Successfully! 🎥");
                     document.getElementById('addReelModal').style.display = 'none';
-                    document.getElementById('reelVideoUrl').value = '';
+                    document.getElementById('reelVideoFile').value = '';
                     document.getElementById('reelCaption').value = '';
                 } else {
                     const err = await res.json();

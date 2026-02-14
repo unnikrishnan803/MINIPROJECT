@@ -1,0 +1,284 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reels - Deliciae</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        secondary: '#FFC107',
+                        dark: '#0f0f0f',
+                        glass: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    fontFamily: {
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <!-- <link rel="stylesheet" href="{% static 'css/dashboard.css' %}"> -->
+    <style>body { background: #0f0f0f; color: white; }</style>
+    
+    <style>
+        /* Body padding handled by dashboard layout */
+        
+        .reels-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: var(--spacing-md) 0;
+        }
+        
+        .reel-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .reel-video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 9/16;
+            background: #000;
+        }
+        
+        .reel-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .reel-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: var(--spacing-lg);
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            color: white;
+        }
+        
+        .reel-restaurant {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .reel-restaurant-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-full);
+        }
+        
+        .reel-restaurant-name {
+            font-weight: 600;
+        }
+        
+        .reel-caption {
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .reel-actions {
+            display: flex;
+            gap: var(--spacing-lg);
+        }
+        
+        .reel-action-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform var(--transition-fast);
+        }
+        
+        .reel-action-btn:hover {
+            transform: scale(1.2);
+        }
+        
+        .reel-action-btn.liked {
+            color: var(--error);
+        }
+        
+        @media (max-width: 600px) {
+            .reels-container {
+                padding: 0;
+            }
+            
+            .reel-card {
+                border-radius: 0;
+                margin-bottom: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        {% include 'components/sidebar.html' %}
+        
+        <!-- Main Content -->
+        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
+            <div class="main-container">
+                <!-- Reels Container -->
+                <div class="reels-container" id="reelsContainer">
+                <!-- Loading -->
+                <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: var(--spacing-md);"></i>
+                    <p>Loading reels...</p>
+                </div>
+                </div>
+            </div> <!-- End Main Container -->
+        </main>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        // Load reels
+        async function loadReels() {
+            const container = document.getElementById('reelsContainer');
+            
+            try {
+                const response = await fetch('/api/reels/');
+                const reels = await response.json();
+                
+                if (reels.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary);">
+                            <i class="fas fa-video" style="font-size: 4rem; margin-bottom: var(--spacing-md); opacity: 0.3;"></i>
+                            <h3>No reels yet</h3>
+                            <p>Check back later for exciting food content!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = reels.map(reel => createReelCard(reel)).join('');
+            } catch (error) {
+                console.error('Error loading reels:', error);
+                container.innerHTML = `
+                    <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary);">
+                        <i class="fas fa-exclamation-circle" style="font-size: 4rem; margin-bottom: var(--spacing-md); opacity: 0.3;"></i>
+                        <h3>Error loading reels</h3>
+                        <p>Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Create reel card
+        function createReelCard(reel) {
+            return `
+                <div class="reel-card">
+                    <div class="reel-video-container">
+                        <video class="reel-video" controls loop>
+                            <source src="${reel.video_url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        
+                        <div class="reel-overlay">
+                            <div class="reel-restaurant">
+                                <img src="${reel.restaurant_avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(reel.restaurant_name)}" 
+                                     alt="${reel.restaurant_name}" 
+                                     class="reel-restaurant-avatar">
+                                <div>
+                                    <div class="reel-restaurant-name">${reel.restaurant_name || 'Restaurant'}</div>
+                                    <div style="font-size: 0.875rem; opacity: 0.8;">${new Date(reel.created_at).toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            
+                            ${reel.caption ? `<div class="reel-caption">${reel.caption}</div>` : ''}
+                            
+                            <div class="reel-actions">
+                                <button class="reel-action-btn ${reel.is_liked ? 'liked' : ''}" onclick="toggleReelLike(${reel.id}, this)">
+                                    <i class="fas fa-heart"></i>
+                                    <span style="font-size: 0.875rem; margin-left: 0.25rem;">${reel.likes_count || 0}</span>
+                                </button>
+                                <button class="reel-action-btn" onclick="openComments(${reel.id})">
+                                    <i class="fas fa-comment"></i>
+                                    <span style="font-size: 0.875rem; margin-left: 0.25rem;">${reel.comments_count || 0}</span>
+                                </button>
+                                <button class="reel-action-btn" onclick="shareReel(${reel.id})">
+                                    <i class="fas fa-share"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Toggle like
+        async function toggleReelLike(id, button) {
+            try {
+                const response = await fetch(`/api/reels/${id}/like/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                button.classList.toggle('liked');
+                button.querySelector('span').textContent = data.likes_count;
+            } catch (error) {
+                console.error('Error toggling like:', error);
+            }
+        }
+        
+        // Open comments
+        function openComments(id) {
+            console.log('Open comments:', id);
+            // Will implement
+        }
+        
+        // Share reel
+        function shareReel(id) {
+            console.log('Share reel:', id);
+            // Will implement
+        }
+        
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadReels);
+    </script>
+</body>
+</html>

@@ -256,58 +256,166 @@ function switchOrderTab(tab) {
 
 // Mock/Quick Order Placement for Demo
 // Mock/Quick Order Placement for Demo
-function placeQuickOrder(foodId) {
-    if (!confirm('Place a quick order for this item?')) return;
-    
-    // Use Session Auth (CSRF) primarily, fallback to Token if exists
-    const headers = {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken')
-    };
-    
-    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-    if (token) headers['Authorization'] = `Token ${token}`;
+// --- Payment & Checkout Logic ---
+let currentCheckoutItem = null;
+let currentQuantity = 1;
 
+function openPaymentModal(item) {
+    currentCheckoutItem = item;
+    currentQuantity = 1;
     
-    // Fetch item details first
-    fetch(`/api/food-items/${foodId}/`, { headers: headers })
-    .then(res => {
-        if(!res.ok) throw new Error("Failed to fetch item details");
-        return res.json();
-    })
-    .then(item => {
-        // Construct basic order payload
+    // Populate Modal
+    const modal = document.getElementById('paymentModal');
+    if(!modal) return;
+    
+    const detailsContainer = document.getElementById('paymentItemDetails');
+    detailsContainer.innerHTML = `
+        <div style="display: flex; gap: 1rem;">
+            <img src="${item.image_url || 'https://placehold.co/100'}" style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover;">
+            <div>
+                <h3>${item.name}</h3>
+                <p style="color: var(--text-secondary);">${item.restaurant.name}</p>
+                <div style="color: var(--accent-primary); font-weight: bold;">₹${item.price}</div>
+            </div>
+        </div>
+    `;
+    
+    updatePaymentTotal();
+    modal.style.display = 'block';
+}
+
+function closePaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    if(modal) modal.style.display = 'none';
+    currentCheckoutItem = null;
+    currentQuantity = 1;
+}
+
+function adjustOrderQuantity(change) {
+    const newQty = currentQuantity + change;
+    if(newQty >= 1 && newQty <= 10) {
+        currentQuantity = newQty;
+        document.getElementById('orderQuantity').textContent = currentQuantity;
+        updatePaymentTotal();
+    }
+}
+
+function updatePaymentTotal() {
+    if(!currentCheckoutItem) return;
+    const total = (parseFloat(currentCheckoutItem.price) * currentQuantity).toFixed(2);
+    document.getElementById('orderTotal').textContent = '₹' + total;
+}
+
+async function processPayment() {
+    if(!currentCheckoutItem) return;
+    
+    const btn = document.querySelector('#paymentModal .btn-primary');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    btn.disabled = true;
+    
+    // Simulate Payment Gateway Delay
+    await new Promise(r => setTimeout(r, 1500));
+    
+    // Proceed to create order
+    try {
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        };
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Token ${token}`;
+        
+        // Items array with repeated IDs for quantity (per backend limitation)
+        // OR better: backend ideally takes {id, qty}. 
+        // Adapting to current backend: sending array of IDs.
+        const itemIds = Array(currentQuantity).fill(currentCheckoutItem.id);
+        
         const orderData = {
-            restaurant: item.restaurant.id, 
-            items: [item.id],
-            total_amount: item.price,
+            restaurant: currentCheckoutItem.restaurant.id, 
+            items: itemIds,
+            total_amount: (currentCheckoutItem.price * currentQuantity).toFixed(2),
             status: 'Ordered'
         };
         
-        return fetch('/api/dining-orders/', {
+        const res = await fetch('/api/dining-orders/', {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(orderData)
         });
-    })
-    .then(async res => {
+        
         if (res.ok) {
-            alert('Order placed successfully! Track it in the Orders tab.');
-            // Refresh order view if visible
+            closePaymentModal();
+            
+            // Show Success Modal
+            const successModal = document.getElementById('paymentSuccessModal');
+            if(successModal) {
+                // Populate Summary
+                const summaryEl = document.getElementById('successOrderSummary');
+                summaryEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="color: var(--text-secondary);">Item</span>
+                        <span>${currentCheckoutItem.name} x${currentQuantity}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem; margin-top: 0.5rem;">
+                        <span>Total Paid</span>
+                        <span style="color: var(--accent-primary);">₹${(currentCheckoutItem.price * currentQuantity).toFixed(2)}</span>
+                    </div>
+                `;
+                successModal.style.display = 'block';
+            } else {
+                 alert('✅ Payment Successful! Order Placed.');
+            }
+            
+            // Refresh
             const activeContainer = document.getElementById('activeOrdersContainer');
              if (activeContainer && activeContainer.offsetParent !== null) {
                 fetchOrders();
             }
-            // Update notification count if function exists
             if (window.fetchNotifications) window.fetchNotifications();
+            
         } else {
             const errData = await res.json();
-            console.error('Order failed:', errData);
-            alert('Failed to place order: ' + (errData.detail || JSON.stringify(errData)));
+            alert('❌ Payment Failed: ' + (errData.detail || 'Unknown error'));
         }
+        
+    } catch (err) {
+        console.error(err);
+        alert('❌ Network Error. Payment failed.');
+    } finally {
+        if(btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+}
+
+function closeSuccessModal() {
+    const modal = document.getElementById('paymentSuccessModal');
+    if(modal) modal.style.display = 'none';
+}
+
+function trackOrderFromSuccess() {
+    closeSuccessModal();
+    // Switch to Orders Tab
+    switchOrderTab('active');
+    // If not already on orders view (e.g. on home), switch to it
+    if(window.showDashboardSection) showDashboardSection('orders-view');
+}
+
+// Updated placeQuickOrder to use Modal
+function placeQuickOrder(foodId) {
+    const headers = { 'X-CSRFToken': getCookie('csrftoken') };
+    const token = localStorage.getItem('authToken');
+    if (token) headers['Authorization'] = `Token ${token}`;
+
+    fetch(`/api/food-items/${foodId}/`, { headers: headers })
+    .then(res => res.json())
+    .then(item => {
+        openPaymentModal(item);
     })
     .catch(err => {
-        console.error(err);
-        alert('Error placing order. See console for details.');
+        console.error("Error fetching item for checkout:", err);
+        alert("Could not load checkout. Please try again.");
     });
 }

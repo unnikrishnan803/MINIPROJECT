@@ -1,0 +1,14 @@
+--- Starting Verification ---
+User verify_user ready.
+Using Restaurant: Signal Grill (ID: 5)
+Table 101 ready: Available
+Logged in.
+Fetching restaurant details for ID 5...
+Restaurant Detail API success.
+Restaurant name matches.
+Fetching tables for restaurant...
+C:\Users\unnik\AppData\Local\Programs\Python\Python312\Lib\site-packages\rest_framework\pagination.py:200: UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: <class 'core.models.Table'> QuerySet.
+  paginator = self.django_paginator_class(queryset, page_size)
+Table Fetch API success. Found 4 tables.
+Created table found in response.
+--- Verification Complete ---

@@ -30,8 +30,119 @@ class RegisterView(TemplateView):
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
+# === NEW MULTI-PAGE VIEWS ===
+
+class HomeView(LoginRequiredMixin, TemplateView):
+    """Main home/feed page"""
+    template_name = "pages/home.html"
+    login_url = '/login/'
+
+class ReelsView(LoginRequiredMixin, TemplateView):
+    """Reels video feed page"""
+    template_name = "pages/reels.html"
+    login_url = '/login/'
+
+class OrdersView(LoginRequiredMixin, TemplateView):
+    """Orders tracking page"""
+    template_name = "pages/orders.html"
+    login_url = '/login/'
+
+class ProfileView(LoginRequiredMixin, TemplateView):
+    """User profile page"""
+    template_name = "pages/profile.html"
+    login_url = '/login/'
+
+class SettingsView(LoginRequiredMixin, TemplateView):
+    """Settings page"""
+    template_name = "pages/settings.html"
+    login_url = '/login/'
+
+class SearchView(LoginRequiredMixin, TemplateView):
+    """Search page"""
+    template_name = "pages/search.html"
+    login_url = '/login/'
+
+# Import shortcut
+from django.shortcuts import get_object_or_404
+
+class RestaurantProfileView(LoginRequiredMixin, TemplateView):
+    """Dedicated Restaurant Profile Page"""
+    template_name = "pages/restaurant_profile.html"
+    login_url = '/login/'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        restaurant_id = self.kwargs.get('id')
+        restaurant = get_object_or_404(Restaurant, id=restaurant_id)
+        
+        context['restaurant'] = restaurant
+        context['posts'] = Reel.objects.filter(restaurant=restaurant).order_by('-created_at')
+        context['menu'] = FoodItem.objects.filter(restaurant=restaurant, is_available=True)
+        # Reviews to be added later
+        
+        # Check if following
+        if self.request.user.is_authenticated:
+            context['is_following'] = Follow.objects.filter(follower=self.request.user, restaurant=restaurant).exists()
+        else:
+            context['is_following'] = False
+            
+        return context
+    """Search results page"""
+    template_name = "pages/search.html"
+    login_url = '/login/'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        query = self.request.GET.get('q', '')
+        context['query'] = query
+        
+        if query:
+            # Search Restaurants
+            # Search Restaurants
+            from django.db.models import Count
+            context['restaurants'] = Restaurant.objects.filter(
+                name__icontains=query, 
+                is_open=True
+            ).annotate(
+                followers_count=Count('followers', distinct=True),
+                reels_count=Count('reels', distinct=True),
+                menu_count=Count('menu_items', distinct=True)
+            )
+            
+            # Search Food Items
+            context['food_items'] = FoodItem.objects.filter(
+                name__icontains=query,
+                is_available=True
+            )
+            
+        return context
+
+class WalletView(LoginRequiredMixin, TemplateView):
+    """User wallet page"""
+    template_name = "pages/wallet.html"
+    login_url = '/login/'
+
+class BookingsView(LoginRequiredMixin, TemplateView):
+    """Table bookings page"""
+    template_name = "pages/bookings.html"
+    login_url = '/login/'
+
+class OffersView(LoginRequiredMixin, TemplateView):
+    """Offers and deals page"""
+    template_name = "pages/offers.html"
+    login_url = '/login/'
+
+# === LEGACY DASHBOARD VIEW (for restaurant/staff) ===
+
 class DashboardView(LoginRequiredMixin, TemplateView):
     login_url = '/login/'
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Redirect customers to new home page
+        if request.user.is_authenticated and request.user.role == 'customer':
+            from django.shortcuts import redirect
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
     
     def get_template_names(self):
         user = self.request.user
@@ -89,8 +200,13 @@ class FoodItemViewSet(viewsets.ModelViewSet):
             return Response({'status': 'unliked', 'likes_count': food.likes.count()})
         return Response({'status': 'liked', 'likes_count': food.likes.count()})
 
+from rest_framework import filters
+
 class FoodListView(generics.ListAPIView):
     serializer_class = FoodItemSerializer
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['trend_score', 'price', 'rating', 'created_at', 'popularity_score']
+    ordering = ['-trend_score'] # Default to trending
 
     def get_queryset(self):
         queryset = FoodItem.objects.all()
@@ -118,7 +234,7 @@ class FoodListView(generics.ListAPIView):
             
         return queryset
 
-class RestaurantListView(generics.ListAPIView):
+class RestaurantViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = RestaurantSerializer
     permission_classes = [AllowAny] # Allow public access
 
@@ -187,10 +303,19 @@ class TableViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        queryset = Table.objects.all()
+        
+        # If specific restaurant requested
+        restaurant_id = self.request.query_params.get('restaurant')
+        if restaurant_id:
+             return queryset.filter(restaurant_id=restaurant_id)
+             
         if user.role == 'restaurant':
             return Table.objects.filter(restaurant__user=user)
         if user.role == 'staff' and user.staff_restaurant:
              return Table.objects.filter(restaurant=user.staff_restaurant)
+             
+        # By default return nothing if no context
         return Table.objects.none()
 
     def perform_create(self, serializer):
@@ -211,6 +336,9 @@ class BookingViewSet(viewsets.ModelViewSet):
         if user.role == 'staff' and user.staff_restaurant:
              return Booking.objects.filter(restaurant=user.staff_restaurant)
         return Booking.objects.filter(customer=user)
+
+    def perform_create(self, serializer):
+        serializer.save(customer=self.request.user)
 
 class DiningOrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
@@ -376,6 +504,41 @@ class ReelViewSet(viewsets.ModelViewSet):
         comments = reel.comments.order_by('-created_at')
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def upload(self, request):
+        if request.user.role != 'restaurant':
+            return Response({'error': 'Only restaurants can upload reels'}, status=403)
+        
+        video_file = request.FILES.get('video_file')
+        caption = request.data.get('caption', '')
+        
+        if not video_file:
+            return Response({'error': 'No video file provided'}, status=400)
+        
+        # Save file manually to media directory
+        import os
+        from django.conf import settings
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        
+        # Generate unique filename
+        import uuid
+        ext = os.path.splitext(video_file.name)[1]
+        filename = f"reels/{uuid.uuid4()}{ext}"
+        
+        path = default_storage.save(filename, ContentFile(video_file.read()))
+        
+        # Create Reel object with local URL
+        video_url = f"{settings.MEDIA_URL}{path}"
+        
+        reel = Reel.objects.create(
+            restaurant=request.user.restaurant_profile,
+            video_url=video_url,
+            caption=caption
+        )
+        
+        return Response(ReelSerializer(reel).data)
 
 class FollowViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -547,55 +710,66 @@ def update_crowd_status(request):
 
 
 
-# --- SOCIAL FEATURES VIEWS ---
 
-class ReelViewSet(viewsets.ModelViewSet):
-    serializer_class = ReelSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    queryset = Reel.objects.all().order_by('-created_at')
 
-    def perform_create(self, serializer):
-        if self.request.user.role == 'restaurant':
-            serializer.save(restaurant=self.request.user.restaurant_profile)
-        else:
-            raise serializers.ValidationError("Only restaurant users can upload reels.")
+# === LOCATION BASED SEARCH VIEW ===
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def like(self, request, pk=None):
-        reel = self.get_object()
-        like, created = ReelLike.objects.get_or_create(user=request.user, reel=reel)
-        if not created:
-            like.delete()
-            return Response({'status': 'unliked', 'likes_count': reel.likes.count()})
-        return Response({'status': 'liked', 'likes_count': reel.likes.count()})
+from math import radians, cos, sin, asin, sqrt
 
-class FollowViewSet(viewsets.ModelViewSet):
-    serializer_class = FollowSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class NearbyRestaurantsAPIView(APIView):
+    """
+    API View to fetch restaurants based on user's location (latitude, longitude).
+    Defaults to 5km radius.
+    """
+    permission_classes = [AllowAny]
 
-    def get_queryset(self):
-        return Follow.objects.filter(follower=self.request.user)
-
-    def perform_create(self, serializer):
+    def get(self, request):
         try:
-            serializer.save(follower=self.request.user)
-        except Exception as e:
-            raise serializers.ValidationError(str(e))
+            user_lat = float(request.query_params.get('lat'))
+            user_lng = float(request.query_params.get('lng'))
+            radius_km = float(request.query_params.get('radius', 5.0))
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "Invalid latitude, longitude, or radius Parameters. Must be numbers."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    @action(detail=False, methods=['post'], url_path='toggle')
-    def toggle_follow(self, request):
-        restaurant_id = request.data.get('restaurant_id')
-        if not restaurant_id:
-            return Response({'error': 'Restaurant ID required'}, status=400)
-        
-        try:
-            restaurant = Restaurant.objects.get(id=restaurant_id)
-            follow, created = Follow.objects.get_or_create(follower=request.user, restaurant=restaurant)
-            
-            if not created:
-                follow.delete()
-                return Response({'status': 'unfollowed', 'restaurant_id': restaurant_id})
-            
-            return Response({'status': 'followed', 'restaurant_id': restaurant_id})
-        except Restaurant.DoesNotExist:
-            return Response({'error': 'Restaurant not found'}, status=404)
+        # Optimization: First filter by a rough bounding box to avoid Haversine on all rows
+        # 1 deg lat ~= 111km. 1 deg lng ~= 111km * cos(lat)
+        # 5km is roughly 0.045 degrees. Let's use 0.1 deg (~11km) as a safe bounding box.
+        lat_min = user_lat - 0.1
+        lat_max = user_lat + 0.1
+        lng_min = user_lng - 0.1
+        lng_max = user_lng + 0.1
+
+        candidates = Restaurant.objects.filter(
+            latitude__range=(lat_min, lat_max),
+            longitude__range=(lng_min, lng_max),
+            is_open=True
+        )
+
+        nearby_restaurants = []
+
+        for restaurant in candidates:
+            if restaurant.latitude is None or restaurant.longitude is None:
+                continue
+
+            # Haversine Formula
+            lon1, lat1, lon2, lat2 = map(radians, [user_lng, user_lat, restaurant.longitude, restaurant.latitude])
+            dlon = lon2 - lon1
+            dlat = lat2 - lat1
+            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+            c = 2 * asin(sqrt(a))
+            r = 6371 # Radius of earth in kilometers
+            distance = c * r
+
+            if distance <= radius_km:
+                serializer = RestaurantSerializer(restaurant, context={'request': request})
+                data = serializer.data
+                data['distance_km'] = round(distance, 2)
+                nearby_restaurants.append(data)
+
+        # Sort by distance
+        nearby_restaurants.sort(key=lambda x: x['distance_km'])
+
+        return Response(nearby_restaurants)

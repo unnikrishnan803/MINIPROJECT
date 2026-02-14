@@ -1,0 +1,529 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ user.username }} - Profile | Deliciae</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        secondary: '#FFC107',
+                        dark: '#0f0f0f',
+                        glass: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    fontFamily: {
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <!-- <link rel="stylesheet" href="{% static 'css/dashboard.css' %}"> -->
+    
+    <style>
+        /* Page-specific styles */
+        /* Body padding handled by dashboard layout */
+        
+        /* Profile Header */
+        .profile-header {
+            position: relative;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .profile-cover {
+            height: 250px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: var(--radius-lg);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .profile-cover::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 250"><path d="M0,100 Q300,150 600,100 T1200,100 L1200,250 L0,250 Z" fill="rgba(255,255,255,0.1)"/></svg>') no-repeat bottom;
+            background-size: cover;
+        }
+        
+        .profile-info {
+            position: relative;
+            margin-top: -60px;
+            padding: 0 var(--spacing-lg);
+        }
+        
+        .profile-avatar-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border: 4px solid var(--bg-dark);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .profile-avatar-edit {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border: 3px solid var(--bg-dark);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform var(--transition-fast);
+        }
+        
+        .profile-avatar-edit:hover {
+            transform: scale(1.1);
+        }
+        
+        .profile-details {
+            margin-top: var(--spacing-md);
+        }
+        
+        .profile-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+        
+        .profile-username {
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .profile-bio {
+            max-width: 600px;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .profile-meta {
+            display: flex;
+            gap: var(--spacing-lg);
+            flex-wrap: wrap;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .profile-meta-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .profile-meta-item i {
+            color: var(--primary);
+        }
+        
+        .profile-actions {
+            margin-top: var(--spacing-md);
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+            transition: all var(--transition-base);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-sm);
+            opacity: 0.5;
+        }
+        
+        /* Activity Tabs */
+        .activity-section {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .activity-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 2px solid var(--glass-border);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        
+        .activity-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .activity-tab {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            white-space: nowrap;
+            transition: color var(--transition-fast);
+        }
+        
+        .activity-tab:hover {
+            color: var(--text-primary);
+        }
+        
+        .activity-tab.active {
+            color: var(--primary);
+        }
+        
+        .activity-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+        
+        .activity-content {
+            display: none;
+        }
+        
+        .activity-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        /* Item Grid - Using dashboard.css classes */
+        /* .item-grid replaced by .food-grid */
+        /* .item-card replaced by .food-card */
+        
+        .food-card {
+            /* Inherits from dashboard.css */
+            cursor: pointer;
+        }
+        
+        .item-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        
+        .item-content {
+            padding: var(--spacing-md);
+        }
+        
+        .item-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .item-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.3;
+        }
+        
+        @media (max-width: 768px) {
+            .profile-cover {
+                height: 180px;
+            }
+            
+            .profile-avatar {
+                width: 90px;
+                height: 90px;
+            }
+            
+            .profile-name {
+                font-size: 1.5rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        {% include 'components/sidebar.html' %}
+        
+        <!-- Main Content -->
+        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
+            <div class="container" style="padding-top: var(--spacing-lg);">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-cover"></div>
+                    
+                    <div class="profile-info">
+                        <div class="profile-avatar-wrapper">
+                            <img src="{{ user.socialaccount_set.first.get_avatar_url|default:'https://ui-avatars.com/api/?name='|add:user.username }}" 
+                                 alt="{{ user.username }}" 
+                                 class="profile-avatar avatar">
+                            <button class="profile-avatar-edit" title="Change avatar">
+                                <i class="fas fa-camera" style="color: white; font-size: 0.875rem;"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="profile-details">
+                            <h1 class="profile-name">{{ user.first_name|default:user.username }}</h1>
+                            <p class="profile-username">@{{ user.username }}</p>
+                            <p class="profile-bio">
+                                Food enthusiast 🍕 | Exploring the best flavors in Kerala 🌴 | Living life one bite at a time ✨
+                            </p>
+                            
+                            <div class="profile-meta">
+                                <div class="profile-meta-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>{{ user.current_location|default:"Kochi, Kerala" }}</span>
+                                </div>
+                                <div class="profile-meta-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Joined {{ user.date_joined|date:"F Y" }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="profile-actions">
+                                <button class="btn btn-primary" onclick="openEditProfileModal()">
+                                    <i class="fas fa-edit"></i>
+                                    Edit Profile
+                                </button>
+                                <button class="btn btn-secondary">
+                                    <i class="fas fa-share-alt"></i>
+                                    Share Profile
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="stat-value" id="totalOrders">0</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <div class="stat-value" id="totalFavorites">0</div>
+                        <div class="stat-label">Favorites</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-value" id="totalReviews">0</div>
+                        <div class="stat-label">Reviews</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-value" id="totalPoints">0</div>
+                        <div class="stat-label">Points</div>
+                    </div>
+                </div>
+                
+                <!-- Activity Section -->
+                <div class="activity-section">
+                    <h2>Activity</h2>
+                    
+                    <!-- Tabs -->
+                    <div class="activity-tabs">
+                        <button class="activity-tab active" onclick="switchTab('favorites')">
+                            <i class="fas fa-heart"></i> Favorites
+                        </button>
+                        <button class="activity-tab" onclick="switchTab('reviews')">
+                            <i class="fas fa-star"></i> Reviews
+                        </button>
+                        <button class="activity-tab" onclick="switchTab('history')">
+                            <i class="fas fa-history"></i> Order History
+                        </button>
+                        <button class="activity-tab" onclick="switchTab('following')">
+                            <i class="fas fa-utensils"></i> Following
+                        </button>
+                    </div>
+                    
+                    <!-- Tab Content -->
+                    <div class="activity-content active" id="favorites-content">
+                        <div class="item-grid" id="favoritesGrid">
+                            <!-- Will be populated via API -->
+                            <div class="empty-state">
+                                <i class="fas fa-heart"></i>
+                                <h3>No favorites yet</h3>
+                                <p>Start exploring and save your favorite foods and restaurants!</p>
+                                <a href="{% url 'home' %}" class="btn btn-primary" style="margin-top: var(--spacing-md);">
+                                    Explore Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-content" id="reviews-content">
+                        <div class="item-grid" id="reviewsGrid">
+                            <div class="empty-state">
+                                <i class="fas fa-star"></i>
+                                <h3>No reviews yet</h3>
+                                <p>Share your dining experiences with the community!</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-content" id="history-content">
+                        <div class="item-grid" id="historyGrid">
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <h3>No order history</h3>
+                                <p>Your past orders will appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-content" id="following-content">
+                        <div class="item-grid" id="followingGrid">
+                            <div class="empty-state">
+                                <i class="fas fa-utensils"></i>
+                                <h3>Not following any restaurants</h3>
+                                <p>Follow your favorite restaurants to stay updated!</p>
+                            </div>
+                        </div>
+                </div>
+            </div> <!-- End Main Container -->
+        </main>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        // Tab Switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.activity-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.closest('.activity-tab').classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.activity-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-content').classList.add('active');
+            
+            // Load data for the tab
+            loadTabData(tabName);
+        }
+        
+        // Load tab data
+        function loadTabData(tabName) {
+            // This will be implemented to fetch data from API
+            console.log('Loading data for:', tabName);
+        }
+        
+        // Load stats
+        async function loadStats() {
+            try {
+                // Fetch user stats from API
+                // For now, using placeholder data
+                document.getElementById('totalOrders').textContent = '45';
+                document.getElementById('totalFavorites').textContent = '12';
+                document.getElementById('totalReviews').textContent = '8';
+                document.getElementById('totalPoints').textContent = '450';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        // Edit profile modal
+        function openEditProfileModal() {
+            alert('Edit profile functionality will be implemented');
+        }
+        
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadTabData('favorites');
+        });
+    </script>
+</body>
+</html>

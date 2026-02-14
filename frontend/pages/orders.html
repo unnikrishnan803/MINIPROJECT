@@ -1,0 +1,434 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Deliciae</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        secondary: '#FFC107',
+                        dark: '#0f0f0f',
+                        glass: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    fontFamily: {
+                        outfit: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'css/global.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    <!-- <link rel="stylesheet" href="{% static 'css/dashboard.css' %}"> -->
+    <style>body { background: #0f0f0f; color: white; }</style>
+    
+    <style>
+        /* Body padding handled by dashboard layout */
+        
+        .page-header {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Order Tabs */
+        .order-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 2px solid var(--glass-border);
+        }
+        
+        .order-tab {
+            padding: var(--spacing-md) var(--spacing-lg);
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            position: relative;
+            transition: color var(--transition-fast);
+        }
+        
+        .order-tab:hover {
+            color: var(--text-primary);
+        }
+        
+        .order-tab.active {
+            color: var(--primary);
+        }
+        
+        .order-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+        
+        /* Order Card */
+        .order-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-md);
+            transition: all var(--transition-base);
+        }
+        
+        .order-card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .order-info h3 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .order-id {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .order-status {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .order-status.ordered {
+            background: rgba(33, 150, 243, 0.1);
+            color: #2196F3;
+        }
+        
+        .order-status.preparing {
+            background: rgba(255, 193, 7, 0.1);
+            color: #FFC107;
+        }
+        
+        .order-status.ready {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+        
+        .order-status.delivered {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+        
+        .order-items {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .order-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-sm) 0;
+        }
+        
+        .order-item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--radius-md);
+            object-fit: cover;
+        }
+        
+        .order-item-details {
+            flex: 1;
+        }
+        
+        .order-item-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .order-item-meta {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .order-item-price {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .order-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--glass-border);
+        }
+        
+        .order-total {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        
+        .order-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+        
+        /* Empty State */
+        .empty-orders {
+            text-align: center;
+            padding: var(--spacing-2xl);
+            color: var(--text-secondary);
+        }
+        
+        .empty-orders i {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.3;
+        }
+        
+        @media (max-width: 768px) {
+            .order-header {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+            
+            .order-footer {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+                align-items: stretch;
+            }
+            
+            .order-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        {% include 'components/sidebar.html' %}
+        
+        <!-- Main Content -->
+        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
+            <div class="container" style="padding-top: var(--spacing-lg);">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <h1 class="page-title">My Orders</h1>
+                    <p style="color: var(--text-secondary);">Track and manage your food orders</p>
+                </div>
+                
+                <!-- Order Tabs -->
+                <div class="order-tabs">
+                    <button class="order-tab active" onclick="switchOrderTab('active')">
+                        Active Orders
+                    </button>
+                    <button class="order-tab" onclick="switchOrderTab('past')">
+                        Past Orders
+                    </button>
+                </div>
+                
+                <!-- Active Orders -->
+                <div id="activeOrders">
+                    <!-- Will be populated via API -->
+                    <div class="empty-orders">
+                        <i class="fas fa-receipt"></i>
+                        <h3>No active orders</h3>
+                        <p>Your active orders will appear here</p>
+                        <a href="{% url 'home' %}" class="btn btn-primary" style="margin-top: var(--spacing-md);">
+                            Start Ordering
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Past Orders -->
+                <div id="pastOrders" style="display: none;">
+                    <!-- Will be populated via API -->
+                    <div class="empty-orders">
+                        <i class="fas fa-history"></i>
+                        <h3>No past orders</h3>
+                        <p>Your order history will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        // Switch tabs
+        function switchOrderTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.order-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide content
+            if (tab === 'active') {
+                document.getElementById('activeOrders').style.display = 'block';
+                document.getElementById('pastOrders').style.display = 'none';
+                loadActiveOrders();
+            } else {
+                document.getElementById('activeOrders').style.display = 'none';
+                document.getElementById('pastOrders').style.display = 'block';
+                loadPastOrders();
+            }
+        }
+        
+        // Load active orders
+        async function loadActiveOrders() {
+            const container = document.getElementById('activeOrders');
+            
+            try {
+                const response = await fetch('/api/dining-orders/?status=Ordered,Preparing,Ready');
+                const orders = await response.json();
+                
+                if (orders.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-orders">
+                            <i class="fas fa-receipt"></i>
+                            <h3>No active orders</h3>
+                            <p>Your active orders will appear here</p>
+                            <a href="/home/" class="btn btn-primary" style="margin-top: var(--spacing-md);">
+                                Start Ordering
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = orders.map(order => createOrderCard(order, true)).join('');
+            } catch (error) {
+                console.error('Error loading active orders:', error);
+            }
+        }
+        
+        // Load past orders
+        async function loadPastOrders() {
+            const container = document.getElementById('pastOrders');
+            
+            try {
+                const response = await fetch('/api/dining-orders/?status=Delivered,Cancelled');
+                const orders = await response.json();
+                
+                if (orders.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-orders">
+                            <i class="fas fa-history"></i>
+                            <h3>No past orders</h3>
+                            <p>Your order history will appear here</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = orders.map(order => createOrderCard(order, false)).join('');
+            } catch (error) {
+                console.error('Error loading past orders:', error);
+            }
+        }
+        
+        // Create order card HTML
+        function createOrderCard(order, isActive) {
+            const statusClass = order.status.toLowerCase().replace(' ', '-');
+            
+            return `
+                <div class="order-card">
+                    <div class="order-header">
+                        <div class="order-info">
+                            <h3>${order.restaurant_name || 'Restaurant'}</h3>
+                            <p class="order-id">Order #${order.id}</p>
+                            <p class="order-id">${new Date(order.created_at).toLocaleString()}</p>
+                        </div>
+                        <span class="order-status ${statusClass}">${order.status}</span>
+                    </div>
+                    
+                    <div class="order-items">
+                        ${order.items ? order.items.map(item => `
+                            <div class="order-item">
+                                <img src="${item.image || 'https://via.placeholder.com/60'}" alt="${item.name}" class="order-item-image">
+                                <div class="order-item-details">
+                                    <div class="order-item-name">${item.name}</div>
+                                    <div class="order-item-meta">Qty: ${item.quantity}</div>
+                                </div>
+                                <div class="order-item-price">₹${item.price * item.quantity}</div>
+                            </div>
+                        `).join('') : '<p>No items</p>'}
+                    </div>
+                    
+                    <div class="order-footer">
+                        <div class="order-total">Total: ₹${order.total_amount}</div>
+                        <div class="order-actions">
+                            ${isActive ? `
+                                <button class="btn btn-secondary btn-sm" onclick="trackOrder(${order.id})">
+                                    <i class="fas fa-map-marker-alt"></i> Track
+                                </button>
+                            ` : `
+                                <button class="btn btn-secondary btn-sm" onclick="reorder(${order.id})">
+                                    <i class="fas fa-redo"></i> Reorder
+                                </button>
+                            `}
+                            <button class="btn btn-primary btn-sm" onclick="viewOrderDetails(${order.id})">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Track order
+        function trackOrder(id) {
+            console.log('Track order:', id);
+            // Will implement
+        }
+        
+        // Reorder
+        function reorder(id) {
+            console.log('Reorder:', id);
+            // Will implement
+        }
+        
+        // View details
+        function viewOrderDetails(id) {
+            console.log('View order details:', id);
+            // Will implement
+        }
+        
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', () => {
+            loadActiveOrders();
+        });
+    </script>
+</body>
+</html>

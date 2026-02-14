@@ -17,9 +17,128 @@
     <div class="glow-bg top-left" style="opacity: 0.5;"></div>
     <div class="glow-bg bottom-right" style="opacity: 0.5;"></div>
 
+    <!-- Upload Reel Modal -->
+    <div id="uploadReelModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close" onclick="closeUploadReelModal()">&times;</span>
+            <h2>Upload a Reel</h2>
+            <form id="uploadReelForm" onsubmit="handleReelUpload(event)">
+                <div class="form-group">
+                    <label>Video File</label>
+                    <input type="file" id="reelVideoFile" accept="video/*" required>
+                </div>
+                <div class="form-group">
+                    <label>Caption</label>
+                    <textarea id="reelCaption" rows="3" placeholder="Write a catchy caption..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload Reel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close" onclick="closeBookingModal()">&times;</span>
+            <h2>Book a Table</h2>
+            <p id="bookingRestaurantName" style="color: var(--accent-primary); margin-bottom: 1rem;"></p>
+            <form id="bookingForm" onsubmit="handleBookingSubmit(event)">
+                <input type="hidden" id="bookingRestaurantId">
+                <div class="form-group">
+                    <label>Date & Time</label>
+                    <input type="datetime-local" id="bookingDateTime" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Number of People</label>
+                    <input type="number" id="bookingPeople" class="form-input" min="1" max="20" value="2" required>
+                </div>
+                <div class="form-group">
+                    <label>Select Table (Optional)</label>
+                    <select id="bookingTable" class="form-input">
+                        <option value="">Any Available Table</option>
+                        <!-- Tables will be loaded here -->
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Confirm Booking</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close" onclick="closePaymentModal()">&times;</span>
+            <h2>Checkout</h2>
+            <div id="paymentItemDetails" style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+                <!-- JS Populated -->
+            </div>
+            
+            <div class="form-group">
+                <label>Quantity</label>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button type="button" class="btn btn-sm btn-glass" onclick="adjustOrderQuantity(-1)"><i class="fas fa-minus"></i></button>
+                    <span id="orderQuantity" style="font-size: 1.2rem; font-weight: bold; width: 30px; text-align: center;">1</span>
+                    <button type="button" class="btn btn-sm btn-glass" onclick="adjustOrderQuantity(1)"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 1.5rem 0; font-size: 1.2rem;">
+                <span>Total Amount:</span>
+                <span id="orderTotal" style="color: var(--accent-primary); font-weight: bold;">₹0.00</span>
+            </div>
+
+            <button class="btn btn-primary btn-full" onclick="processPayment()">
+                <i class="fas fa-credit-card"></i> Pay Now & Order
+            </button>
+        </div>
+    </div>
+
+    <!-- Payment Success Modal -->
+    <div id="paymentSuccessModal" class="modal">
+        <div class="modal-content glass-card" style="text-align: center; padding: 3rem 2rem;">
+            <div class="success-checkmark">
+                <div class="check-icon">
+                    <span class="icon-line line-tip"></span>
+                    <span class="icon-line line-long"></span>
+                    <div class="icon-circle"></div>
+                    <div class="icon-fix"></div>
+                </div>
+            </div>
+            
+            <h2 style="color: #2ecc71; margin-top: 1.5rem;">Order Confirmed!</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">Your order has been placed successfully.</p>
+            
+            <div id="successOrderSummary" style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem; margin-bottom: 2rem; text-align: left;">
+                <!-- JS Populated -->
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-glass btn-full" onclick="closeSuccessModal()">Continue Shopping</button>
+                <button class="btn btn-primary btn-full" onclick="trackOrderFromSuccess()">Track Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restaurant Profile Modal -->
+    <div id="restaurantProfileModal" class="modal">
+        <div class="modal-content glass-card" style="max-width: 800px; padding: 0;">
+            <span class="close" onclick="document.getElementById('restaurantProfileModal').style.display='none'" style="position: absolute; right: 20px; top: 15px; z-index: 100;">&times;</span>
+            <div id="profile-header"></div>
+            <div id="profile-body"></div>
+        </div>
+    </div>
+    
     <div class="dashboard-container">
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Mobile Overlay -->
+        <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
+        
         <!-- Sidebar -->
-        <aside class="sidebar glass-card">
+        <aside class="sidebar glass-card" id="sidebar">
             <div class="logo">
                 <i class="fas fa-utensils"></i> Deliciae
             </div>
@@ -28,7 +147,7 @@
                 <a href="#" class="nav-item active" onclick="showDashboardSection('home-view'); return false;"><i class="fas fa-home"></i> Home</a>
                 <a href="#" class="nav-item" onclick="showDashboardSection('reels-view'); fetchReels(); return false;"><i class="fas fa-play-circle"></i> Reels</a>
                 <a href="#" class="nav-item" onclick="showDashboardSection('orders-view'); initOrderTracking(); return false;"><i class="fas fa-receipt"></i> Orders</a>
-                <a href="#" class="nav-item" onclick="alert('Settings coming soon!'); return false;"><i class="fas fa-cog"></i> Settings</a>
+                <a href="#" class="nav-item" onclick="showDashboardSection('settings-view'); return false;"><i class="fas fa-cog"></i> Settings</a>
             </nav>
 
             <div class="user-profile">
@@ -44,6 +163,24 @@
         <!-- Main Content -->
         <main class="main-content">
             <!-- Top Header -->
+            <!-- Mobile Top Bar -->
+            <div class="mobile-top-bar">
+                <div class="logo">
+                    <i class="fas fa-utensils"></i> Deliciae
+                </div>
+                <div class="mobile-actions">
+                    {% if user.role != 'restaurant' %}
+                    <button class="header-icon-btn" onclick="showDashboardSection('offers-view'); fetchOffers(); return false;" title="Offers">
+                        <i class="fas fa-gift"></i>
+                    </button>
+                    <button class="header-icon-btn" onclick="toggleNotifications()" title="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="mobileNotificationBadge" style="display: none;">0</span>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            
             <header class="dashboard-header">
                 <div class="header-text">
                     <h1>Hi, {{ user.first_name|default:user.username }}! 👋</h1>
@@ -55,55 +192,36 @@
                         {% endif %}
                     </p>
                 </div>
+                {% if user.role == 'restaurant' %}
                 <div class="header-actions">
-                    {% if user.role == 'restaurant' %}
-                        <button class="btn btn-sm btn-glass" onclick="openAddFoodModal()" title="Add Menu Item">
-                            <i class="fas fa-plus"></i> Add Item
-                        </button>
-                    {% else %}
-                        <div class="search-bar">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="searchInput" placeholder="Search food..." style="width: 200px;">
-                        </div>
-                        
-                        <div style="border-left: 1px solid rgba(255,255,255,0.2); height: 20px; margin: 0 10px;"></div>
-                        
-                        <i class="fas fa-map-marker-alt"></i>
-                        <input type="text" id="locationInput" value="{{ user.current_location|default:'' }}" placeholder="Location (e.g. Kochi)" style="width: 150px; background: transparent; border: none; color: white; outline: none;">
-                        
+                    <button class="btn btn-sm btn-glass" onclick="openAddFoodModal()" title="Add Menu Item">
+                        <i class="fas fa-plus"></i> Add Item
+                    </button>
+                    <button class="btn btn-sm btn-glass" onclick="openUploadReelModal()" title="Upload Reel">
+                        <i class="fas fa-video"></i> Upload Reel
+                    </button>
+                </div>
+                {% endif %}
+            </header>
+            
+            {% if user.role != 'restaurant' %}
+            <!-- Search & Filters Section -->
+            <div class="search-filters-section glass-card" style="padding: 1.5rem; margin-bottom: 2rem; border-radius: 15px;">
+                <div class="search-bar" style="margin-bottom: 1rem;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search for food, restaurants..." style="width: 100%;">
+                </div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 200px;">
+                        <i class="fas fa-map-marker-alt" style="color: var(--accent-primary);"></i>
+                        <input type="text" id="locationInput" value="{{ user.current_location|default:'' }}" placeholder="Location (e.g. Kochi)" style="flex: 1; background: transparent; border: none; color: white; outline: none;">
                         <button class="btn btn-sm btn-glass" onclick="detectLocation()" title="Detect My Location">
                             <i class="fas fa-crosshairs"></i>
                         </button>
-                        
-                        <div style="border-left: 1px solid rgba(255,255,255,0.2); height: 20px; margin: 0 10px;"></div>
-                        
-                        <button class="header-icon-btn" onclick="showDashboardSection('offers-view'); fetchOffers(); return false;" title="Offers">
-                            <i class="fas fa-gift"></i>
-                        </button>
-                        
-                        <div class="notification-wrapper">
-                            <button class="header-icon-btn" onclick="toggleNotifications()" title="Notifications">
-                                <i class="fas fa-bell"></i>
-                                <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-                            </button>
-                            
-                            <!-- Notification Dropdown -->
-                            <div class="notification-dropdown" id="notificationDropdown" style="display: none;">
-                                <div class="notification-header">
-                                    <h3>Notifications</h3>
-                                    <button class="btn-text" onclick="markAllNotificationsRead()">Mark all read</button>
-                                </div>
-                                <div class="notification-list" id="notificationList">
-                                    <div class="notification-empty">
-                                        <i class="fas fa-bell-slash"></i>
-                                        <p>No notifications</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
+                    </div>
                 </div>
-            </header>
+            </div>
+            {% endif %}
 
             {% if user.role == 'restaurant' %}
                 <!-- RESTAURANT DASHBOARD -->
@@ -145,11 +263,11 @@
 
                 <!-- Smart Highlights Section -->
                 <section class="smart-highlights" style="margin-bottom: 2rem;">
-                    <h3 style="margin-bottom: 1rem;">✨ Smart Highlights</h3>
+                    <h3 style="margin-bottom: 1.5rem;">✨ Smart Highlights</h3>
                     
-                    <div class="trending-scroll" style="display: flex; gap: 1.5rem; margin-bottom: 2rem; overflow-x: auto; padding-bottom: 1rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                         <!-- Trending Now -->
-                        <div class="glass-card" style="padding: 1.5rem; min-width: 280px; flex: 0 0 auto;">
+                        <div class="glass-card" style="padding: 1.5rem;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                                 <i class="fas fa-fire" style="color: var(--accent-primary); font-size: 1.2rem;"></i>
                                 <h4 style="margin: 0;">Trending Now</h4>
@@ -160,7 +278,7 @@
                         </div>
                         
                         <!-- Fast Selling -->
-                        <div class="glass-card" style="padding: 1.5rem; min-width: 280px; flex: 0 0 auto;">
+                        <div class="glass-card" style="padding: 1.5rem;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                                 <i class="fas fa-bolt" style="color: #ffc107; font-size: 1.2rem;"></i>
                                 <h4 style="margin: 0;">Fast Selling</h4>
@@ -171,7 +289,7 @@
                         </div>
                         
                         <!-- Active Offers -->
-                        <div class="glass-card" style="padding: 1.5rem; min-width: 280px; flex: 0 0 auto;">
+                        <div class="glass-card" style="padding: 1.5rem;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
                                 <i class="fas fa-gift" style="color: #2ecc71; font-size: 1.2rem;"></i>
                                 <h4 style="margin: 0;">Active Offers</h4>
@@ -262,6 +380,71 @@
                 </section>
             </div>
 
+            <!-- Settings View (Hidden by default) -->
+            <div id="settings-view" style="display: none;">
+                <section>
+                    <div class="section-title">
+                        <h3>Account Settings <i class="fas fa-user-cog" style="color: var(--accent-primary)"></i></h3>
+                    </div>
+                    
+                    <div class="glass-card" style="padding: 2rem; max-width: 600px; margin: 0 auto;">
+                        <form id="settingsForm" onsubmit="event.preventDefault(); saveUserSettings();">
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Full Name</label>
+                                <input type="text" id="settingsName" class="form-input" value="{{ user.first_name|default:user.username }}" placeholder="Your name">
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Email</label>
+                                <input type="email" id="settingsEmail" class="form-input" value="{{ user.email }}" placeholder="your@email.com">
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Username</label>
+                                <input type="text" class="form-input" value="{{ user.username }}" disabled style="opacity: 0.6; cursor: not-allowed;">
+                                <small style="color: var(--text-secondary); font-size: 0.8rem;">Username cannot be changed</small>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Location Preference</label>
+                                <input type="text" id="settingsLocation" class="form-input" placeholder="City, State" value="{{ user.location|default:'' }}">
+                                <small style="color: var(--text-secondary); font-size: 0.8rem;">Used to show nearby restaurants</small>
+                            </div>
+                            
+                            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem;">
+                                <h4 style="margin-bottom: 1rem;">Preferences</h4>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                    <div>
+                                        <strong>Email Notifications</strong>
+                                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Receive order updates via email</p>
+                                    </div>
+                                    <label class="switch">
+                                        <input type="checkbox" id="emailNotifications" checked>
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong>Show Offers</strong>
+                                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">Display promotional offers</p>
+                                    </div>
+                                    <label class="switch">
+                                        <input type="checkbox" id="showOffers" checked>
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 2rem;">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+
             <!-- Restaurant Profile Modal -->
             <div id="restaurantProfileModal" class="modal" style="z-index: 2000;">
                 <div class="modal-content glass-card" style="width: 95%; max-width: 900px; height: 90vh; overflow-y: auto; margin: 2% auto; background: #111;">
@@ -322,7 +505,7 @@
 
     <!-- Main Logic -->
     <!-- Main Logic -->
-    <script src="{% static 'js/script.js' %}?v=3"></script>
+    <script src="{% static 'js/script.js' %}?v=6"></script>
     
     <!-- Add Food Item Logic -->
     <script>
@@ -715,14 +898,83 @@
             fetchNotifications();
             populateSmartHighlights();
         }
+        
+        // Save User Settings
+        async function saveUserSettings() {
+            const name = document.getElementById('settingsName').value;
+            const email = document.getElementById('settingsEmail').value;
+            const location = document.getElementById('settingsLocation').value;
+            const emailNotifications = document.getElementById('emailNotifications').checked;
+            const showOffers = document.getElementById('showOffers').checked;
+            
+            const btn = document.querySelector('#settingsForm button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/user/update/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        first_name: name,
+                        email: email,
+                        location: location,
+                        preferences: {
+                            email_notifications: emailNotifications,
+                            show_offers: showOffers
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('✅ Settings saved successfully!');
+                } else {
+                    const error = await response.json();
+                    alert('❌ Error saving settings: ' + JSON.stringify(error));
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('❌ Failed to save settings. Please try again.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
     </script>
-    <script src="{% static 'js/orders.js' %}?v=2"></script>
+    <script src="{% static 'js/orders.js' %}?v=3"></script>
     
     <!-- Logout Logic -->
     <script>
         function logout() {
             window.location.href = "{% url 'account_logout' %}";
         }
+        
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('active');
+                overlay.classList.toggle('active');
+            }
+        }
+        
+        // Close mobile menu when clicking nav items
+        document.addEventListener('DOMContentLoaded', function() {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 900) {
+                        toggleMobileMenu();
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>

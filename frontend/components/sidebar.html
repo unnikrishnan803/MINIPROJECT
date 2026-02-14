@@ -1,0 +1,91 @@
+<aside class="fixed top-0 left-0 h-screen w-[240px] bg-black border-r border-white/10 flex flex-col z-50">
+    <!-- Logo -->
+    <div class="p-6 border-b border-white/10">
+        <a href="{% url 'home' %}" class="flex items-center gap-3 text-2xl font-bold text-white">
+            <i class="fas fa-utensils text-[#FF6B35]"></i>
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-[#FF6B35] to-[#FFC107]">Deliciae</span>
+        </a>
+    </div>
+
+    <!-- Menu -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar py-6">
+        <ul class="flex flex-col gap-2 px-3">
+            <li>
+                <a href="{% url 'home' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'home' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-home w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Home</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+                    <div class="relative flex items-center justify-center w-5">
+                        <i class="fas fa-robot text-[#FF6B35] group-hover:scale-110 transition-transform"></i>
+                        <div class="absolute inset-0 bg-[#FF6B35]/30 rounded-full animate-ping opacity-50"></div>
+                    </div>
+                    <span class="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B35] to-[#FFC107]">AI Trends</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'search' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'search' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-utensils w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Order Food</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'bookings' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'bookings' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-chair w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Bookings</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'reels' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'reels' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-play-circle w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Reels</span>
+                    <span class="ml-auto text-[10px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full">New</span>
+                </a>
+            </li>
+            
+            <li class="my-2 border-b border-white/5"></li>
+            
+            <li>
+                <a href="{% url 'orders' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'orders' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-receipt w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">My Orders</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'wallet' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'wallet' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-wallet w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Wallet</span>
+                </a>
+            </li>
+             <li>
+                <a href="{% url 'offers' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'offers' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-tags w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Offers</span>
+                </a>
+            </li>
+             <li>
+                <a href="{% url 'settings' %}" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group {% if request.resolver_match.url_name == 'settings' %}bg-[#FF6B35]/10 text-[#FF6B35]{% endif %}">
+                    <i class="fas fa-cog w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Settings</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- User Profile & Logout -->
+    <div class="p-4 border-t border-white/10 bg-[#0f0f0f]">
+        <div class="flex items-center gap-3 mb-4 px-2">
+            <img src="{{ user.socialaccount_set.first.get_avatar_url|default:'https://ui-avatars.com/api/?name='|add:user.username }}" alt="{{ user.username }}" class="w-10 h-10 rounded-full border-2 border-[#FF6B35]/20">
+            <div class="overflow-hidden">
+                <h4 class="text-white text-sm font-semibold truncate">{{ user.first_name|default:user.username }}</h4>
+                <p class="text-xs text-gray-500 truncate">Foodie</p>
+            </div>
+        </div>
+        <a href="{% url 'account_logout' %}" class="flex items-center justify-center gap-2 w-full py-2.5 rounded-[12px] bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all group">
+            <i class="fas fa-sign-out-alt group-hover:scale-110 transition-transform"></i>
+            <span class="font-medium text-sm">Logout</span>
+        </a>
+    </div>
+</aside>

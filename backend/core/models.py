@@ -68,6 +68,7 @@ class FoodItem(models.Model):
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=6, decimal_places=2)
     category = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='food_items/', blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
     video_url = models.URLField(blank=True, null=True, help_text="URL to a short food video")
     is_available = models.BooleanField(default=True)

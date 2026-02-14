@@ -1,0 +1,165 @@
+<!-- Navigation Component -->
+{% load static %}
+
+<!-- Desktop Navigation -->
+<nav class="navbar">
+    <div class="navbar-container">
+        <!-- Logo -->
+        <a href="{% url 'home' %}" class="navbar-logo">
+            <i class="fas fa-utensils"></i>
+            Deliciae
+        </a>
+        
+        <!-- Nav Links (Desktop) -->
+        <!-- Nav Links Moved to Sidebar -->
+        
+        <!-- Right Section -->
+        <div class="navbar-right">
+            <!-- Search -->
+            <div class="navbar-search">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search food, restaurants..." id="navbarSearchInput">
+            </div>
+            
+            <!-- Notifications -->
+            <button class="navbar-icon-btn" onclick="toggleNotifications()" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="badge" id="notificationCount" style="display: none;">0</span>
+            </button>
+            
+            <!-- User Menu -->
+            <div class="navbar-user">
+                <button class="navbar-user-btn" onclick="toggleUserMenu()">
+                    <img src="{{ user.socialaccount_set.first.get_avatar_url|default:'https://ui-avatars.com/api/?name='|add:user.username }}" alt="{{ user.username }}" class="avatar">
+                    <i class="fas fa-chevron-down" style="font-size: 0.75rem; color: var(--text-secondary);"></i>
+                </button>
+                
+                <!-- User Dropdown -->
+                <div class="navbar-user-dropdown" id="userDropdown">
+                    <div class="navbar-user-info">
+                        <h4>{{ user.first_name|default:user.username }}</h4>
+                        <p>{{ user.email }}</p>
+                    </div>
+                    <div class="navbar-user-menu">
+                        <a href="{% url 'profile' %}">
+                            <i class="fas fa-user"></i>
+                            My Profile
+                        </a>
+                        <a href="{% url 'settings' %}">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                        <div class="divider"></div>
+                        <a href="{% url 'account_logout' %}" style="color: var(--error);">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile Menu Toggle -->
+            <button class="navbar-mobile-toggle" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile Menu Overlay -->
+<div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="toggleMobileMenu()"></div>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobileMenu">
+    <ul class="mobile-menu-links">
+        <li><a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+            <i class="fas fa-home"></i> Home
+        </a></li>
+        <li><a href="{% url 'reels' %}" class="{% if request.resolver_match.url_name == 'reels' %}active{% endif %}">
+            <i class="fas fa-play-circle"></i> Reels
+        </a></li>
+        <li><a href="{% url 'orders' %}" class="{% if request.resolver_match.url_name == 'orders' %}active{% endif %}">
+            <i class="fas fa-receipt"></i> Orders
+        </a></li>
+        <li><a href="{% url 'profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+            <i class="fas fa-user"></i> Profile
+        </a></li>
+        <li><a href="{% url 'settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+            <i class="fas fa-cog"></i> Settings
+        </a></li>
+        <div class="divider"></div>
+        <li><a href="{% url 'account_logout' %}" style="color: var(--error);">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a></li>
+    </ul>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+<div class="bottom-nav">
+    <div class="bottom-nav-container">
+        <a href="{% url 'home' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="{% url 'reels' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'reels' %}active{% endif %}">
+            <i class="fas fa-play-circle"></i>
+            <span>Reels</span>
+        </a>
+        <a href="{% url 'orders' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'orders' %}active{% endif %}">
+            <i class="fas fa-receipt"></i>
+            <span>Orders</span>
+        </a>
+        <a href="{% url 'profile' %}" class="bottom-nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+</div>
+
+<!-- Navigation JavaScript -->
+<script>
+    // Toggle User Menu
+    function toggleUserMenu() {
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.classList.toggle('active');
+    }
+    
+    // Toggle Mobile Menu
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobileMenu');
+        const overlay = document.getElementById('mobileMenuOverlay');
+        const toggle = document.querySelector('.navbar-mobile-toggle i');
+        
+        menu.classList.toggle('active');
+        overlay.classList.toggle('active');
+        
+        // Change icon
+        if (menu.classList.contains('active')) {
+            toggle.classList.remove('fa-bars');
+            toggle.classList.add('fa-times');
+        } else {
+            toggle.classList.remove('fa-times');
+            toggle.classList.add('fa-bars');
+        }
+    }
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+        const userMenu = document.querySelector('.navbar-user');
+        const userDropdown = document.getElementById('userDropdown');
+        
+        if (userMenu && !userMenu.contains(event.target)) {
+            userDropdown.classList.remove('active');
+        }
+    });
+    
+    // Search functionality
+    document.getElementById('navbarSearchInput')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const query = this.value.trim();
+            if (query) {
+                window.location.href = `/search/?q=${encodeURIComponent(query)}`;
+            }
+        }
+    });
+</script>

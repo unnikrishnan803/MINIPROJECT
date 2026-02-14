@@ -16,7 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from core.views import IndexView, LoginView, RegisterView, DashboardView, KitchenView
+from core.views import (
+    IndexView, LoginView, RegisterView, DashboardView, KitchenView,
+    HomeView, ReelsView, OrdersView, ProfileView, SettingsView, SearchView,
+    WalletView, BookingsView, OffersView  # New page views
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,6 +31,27 @@ urlpatterns = [
     path('', IndexView.as_view(), name='index'),
     path('login/', LoginView.as_view(), name='login'),
     path('register/', RegisterView.as_view(), name='register'),
+    
+    # New Multi-Page Architecture
+    path('home/', HomeView.as_view(), name='home'),
+    path('reels/', ReelsView.as_view(), name='reels'),
+    path('orders/', OrdersView.as_view(), name='orders'),
+    path('profile/', ProfileView.as_view(), name='profile'),
+    path('settings/', SettingsView.as_view(), name='settings'),
+    path('search/', SearchView.as_view(), name='search'),
+    path('wallet/', WalletView.as_view(), name='wallet'),
+    path('bookings/', BookingsView.as_view(), name='bookings'),
+    path('offers/', OffersView.as_view(), name='offers'),
+    path('restaurant/<int:id>/', RestaurantProfileView.as_view(), name='restaurant_profile'),
+    
+    # Legacy Dashboard (for restaurant/staff)
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('kitchen-view/', KitchenView.as_view(), name='kitchen-view'),
 ]
+
+# Serve media files in development
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
