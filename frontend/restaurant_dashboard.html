@@ -153,35 +153,65 @@
             <!-- Settings Section -->
             <!-- Settings Section -->
             <div id="settings-section" style="display:none;">
-                <div class="glass-card" style="padding: 30px;">
-                    <h3>Restaurant Settings</h3>
-                    <form onsubmit="event.preventDefault(); saveSettings();">
-                        <div class="form-group">
-                            <label>Restaurant Name</label>
-                            <input type="text" id="settingName" class="form-input" value="{{ user.restaurant_profile.name }}">
-                        </div>
-                        <div class="form-group">
-                            <label>Location</label>
-                            <input type="text" id="settingLocation" class="form-input" value="{{ user.restaurant_profile.location }}">
-                        </div>
-                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label>Opening Time</label>
-                                <input type="time" id="settingOpen" class="form-input" value="{{ user.restaurant_profile.opening_time|time:'H:i' }}">
+                <h2 style="margin-bottom: 20px;">Restaurant Profile Settings</h2>
+                <div class="glass-card" style="padding: 30px; max-width: 800px;">
+                    <form id="profileSettingsForm" onsubmit="updateProfile(event)">
+                        
+                        <div style="display: flex; gap: 30px; margin-bottom: 30px; align-items: start; flex-wrap: wrap;">
+                            <div style="text-align: center;">
+                                <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; margin-bottom: 10px; border: 3px solid var(--accent-primary); position: relative;">
+                                    <img id="profilePreview" src="{{ user.get_profile_picture }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <label for="profileImageInput" class="btn btn-sm btn-secondary" style="cursor: pointer;">
+                                    <i class="fas fa-camera"></i> Change
+                                </label>
+                                <input type="file" id="profileImageInput" accept="image/*" style="display: none;" onchange="previewImage(this)">
                             </div>
-                            <div class="form-group">
-                                <label>Closing Time</label>
-                                <input type="time" id="settingClose" class="form-input" value="{{ user.restaurant_profile.closing_time|time:'H:i' }}">
+                            
+                            <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; min-width: 300px;">
+                                <div class="form-group" style="grid-column: span 2;">
+                                    <label>Restaurant Name</label>
+                                    <input type="text" id="settingsName" class="form-input" value="{{ user.restaurant_profile.name }}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Cuisine Type</label>
+                                    <input type="text" id="settingsCuisine" class="form-input" value="{{ user.restaurant_profile.cuisine_type }}">
+                                </div>
+                                
+                                <div class="form-group" style="grid-column: span 2;">
+                                    <label>Location</label>
+                                    <input type="text" id="settingsLocation" class="form-input" value="{{ user.restaurant_profile.location }}">
+                                </div>
+
+                                <div class="form-group" style="grid-column: span 2;">
+                                    <label>Google Maps Link <small style="color: rgba(255,255,255,0.5); font-weight: normal;">(Auto-extracts coordinates)</small></label>
+                                    <input type="text" id="settingsMapsLink" class="form-input" placeholder="Paste Google Maps link here to update coordinates">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Opening Time</label>
+                                    <input type="time" id="settingsOpenTime" class="form-input" value="{{ user.restaurant_profile.opening_time|time:'H:i' }}">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Closing Time</label>
+                                    <input type="time" id="settingsCloseTime" class="form-input" value="{{ user.restaurant_profile.closing_time|time:'H:i' }}">
+                                </div>
+                                
+                                <div class="form-group" style="grid-column: span 2;">
+                                     <label class="switch">
+                                        <input type="checkbox" id="settingsIsOpen" {{ user.restaurant_profile.is_open|yesno:"checked," }}>
+                                        <span class="slider round"></span>
+                                        <span style="margin-left: 10px; color: white;">Open for Business</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="switch">
-                                <input type="checkbox" id="settingIsOpen" {{ user.restaurant_profile.is_open|yesno:"checked," }}>
-                                <span class="slider round"></span>
-                                <span style="margin-left: 10px; color: white;">Open for Business</span>
-                            </label>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
                     </form>
                 </div>
             </div>
@@ -272,6 +302,21 @@
     </div>
 
     <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
         async function addFoodItem() {
             const name = document.getElementById('newItemName').value;
             const category = document.getElementById('newItemCategory').value;
@@ -319,9 +364,97 @@
         }
 
         // Modal Functions
+        let currentEditingId = null;
+
         function openAddFoodModal() {
+            currentEditingId = null;
             const modal = document.getElementById('addFoodModal');
-            if (modal) modal.style.display = 'block';
+            if (modal) {
+                modal.style.display = 'block';
+                document.querySelector('#addFoodModal h2').innerText = "Add New Item";
+                document.querySelector('#addFoodModal .btn-primary').innerText = "Add Item";
+                document.querySelector('#addFoodModal .btn-primary').onclick = addFoodItem;
+                document.querySelector('#addFoodModal form').reset();
+            }
+        }
+
+        async function openEditFoodModal(id) {
+            currentEditingId = id;
+            const modal = document.getElementById('addFoodModal');
+            if (modal) {
+                modal.style.display = 'block';
+                document.querySelector('#addFoodModal h2').innerText = "Edit Item";
+                document.querySelector('#addFoodModal .btn-primary').innerText = "Save Changes";
+                document.querySelector('#addFoodModal .btn-primary').onclick = function() { updateFoodItem(id); };
+                
+                // Fetch item details to populate form
+                try {
+                    const res = await fetch(`/api/food-items/${id}/`);
+                    if(res.ok) {
+                        const item = await res.json();
+                        document.getElementById('newItemName').value = item.name;
+                        document.getElementById('newItemCategory').value = item.category;
+                        document.getElementById('newItemPrice').value = item.price;
+                    }
+                } catch(e) {
+                    console.error("Error fetching item details", e);
+                }
+            }
+        }
+
+        async function updateFoodItem(id) {
+            const name = document.getElementById('newItemName').value;
+            const category = document.getElementById('newItemCategory').value;
+            const price = document.getElementById('newItemPrice').value;
+            const imageFile = document.getElementById('newItemImage').files[0];
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('category', category);
+            formData.append('price', price);
+            if(imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            try {
+                const res = await fetch(`/api/food-items/${id}/`, {
+                    method: 'PATCH',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData
+                });
+
+                if(res.ok) {
+                    alert('Item updated successfully!');
+                    closeAddFoodModal();
+                    fetchMenuItems();
+                } else {
+                    const data = await res.json();
+                    alert('Error updating item: ' + JSON.stringify(data));
+                }
+            } catch(err) {
+                console.error(err);
+                alert('Failed to connect to server.');
+            }
+        }
+
+        async function deleteFoodItem(id) {
+            if(!confirm("Are you sure you want to delete this item?")) return;
+
+            try {
+                const res = await fetch(`/api/food-items/${id}/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+
+                if(res.ok) {
+                    fetchMenuItems(); // Refresh list
+                } else {
+                    alert('Error deleting item');
+                }
+            } catch(err) {
+                console.error(err);
+                alert('Failed to delete item.');
+            }
         }
 
         function closeAddFoodModal() {
@@ -414,7 +547,10 @@
                                 <span class="slider round"></span>
                             </label>
                         </td>
-                        <td><button class="btn-icon"><i class="fas fa-edit"></i></button></td>
+                        <td>
+                            <button class="btn-icon" onclick="openEditFoodModal(${item.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon delete-btn" onclick="deleteFoodItem(${item.id})" title="Delete" style="color: #ff6b6b;"><i class="fas fa-trash"></i></button>
+                        </td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -588,24 +724,72 @@
             }
         }
 
-        async function saveSettings() {
-            const payload = {
-                name: document.getElementById('settingName').value,
-                location: document.getElementById('settingLocation').value,
-                opening_time: document.getElementById('settingOpen').value,
-                closing_time: document.getElementById('settingClose').value,
-                is_open: document.getElementById('settingIsOpen').checked
-            };
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profilePreview').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function updateProfile(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Saving...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('name', document.getElementById('settingsName').value);
+            formData.append('cuisine_type', document.getElementById('settingsCuisine').value);
+            formData.append('location', document.getElementById('settingsLocation').value);
+            formData.append('is_open', document.getElementById('settingsIsOpen').checked);
+            
+            const mapsLink = document.getElementById('settingsMapsLink').value;
+            if(mapsLink) {
+                formData.append('maps_link', mapsLink);
+            }
+            
+            const openTime = document.getElementById('settingsOpenTime').value;
+            const closeTime = document.getElementById('settingsCloseTime').value;
+            if(openTime) formData.append('opening_time', openTime);
+            if(closeTime) formData.append('closing_time', closeTime);
+
+            const imageInput = document.getElementById('profileImageInput');
+            if(imageInput.files[0]) {
+                formData.append('image', imageInput.files[0]);
+            }
 
             try {
-                const res = await fetch('/api/restaurants/{{ user.restaurant_profile.id }}/', {
+                const res = await fetch('/api/restaurant/profile/', {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                    body: JSON.stringify(payload)
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData
                 });
-                if(res.ok) alert('Settings Saved!');
-                else alert('Error Saving Settings');
-            } catch(e) { console.error(e); alert('Connection Failed'); }
+
+                if(res.ok) {
+                    alert('Profile Updated Successfully!');
+                    location.reload(); 
+                } else {
+                    const contentType = res.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const err = await res.json();
+                        alert('Error: ' + JSON.stringify(err));
+                    } else {
+                        const text = await res.text();
+                        console.error("Server Error:", text);
+                        alert('Server Error (Check Console for details). Status: ' + res.status);
+                    }
+                }
+            } catch(error) {
+                console.error("Fetch error:", error);
+                alert('Connection Failed: ' + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
 
         async function uploadReel() {
@@ -624,7 +808,8 @@
             formData.append('caption', caption);
 
             try {
-                const res = await fetch('/api/reels/', {
+                // Fixed: Point to the upload endpoint
+                const res = await fetch('/api/reels/upload/', {
                      method: 'POST',
                      headers: { 
                         'X-CSRFToken': getCookie('csrftoken')

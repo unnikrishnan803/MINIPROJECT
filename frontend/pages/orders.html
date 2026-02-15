@@ -239,7 +239,8 @@
         {% include 'components/sidebar.html' %}
         
         <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
+        <main class="flex-1 ml-0 md:ml-[240px] w-full md:w-[calc(100%-240px)] p-4 md:p-8 pb-24 md:pb-8">
+            {% include 'components/mobile_bottom_nav.html' %}
             <div class="container" style="padding-top: var(--spacing-lg);">
                 <!-- Page Header -->
                 <div class="page-header">
@@ -310,8 +311,9 @@
             const container = document.getElementById('activeOrders');
             
             try {
-                const response = await fetch('/api/dining-orders/?status=Ordered,Preparing,Ready');
-                const orders = await response.json();
+                const response = await fetch('/api/dining-orders/?status=Ordered,Preparing,Ready,Out for Delivery,Served');
+                const data = await response.json();
+                const orders = data.results || data; // Handle pagination
                 
                 if (orders.length === 0) {
                     container.innerHTML = `
@@ -330,6 +332,15 @@
                 container.innerHTML = orders.map(order => createOrderCard(order, true)).join('');
             } catch (error) {
                 console.error('Error loading active orders:', error);
+                
+                // Show error state in UI
+                container.innerHTML = `
+                    <div class="empty-orders">
+                        <i class="fas fa-exclamation-circle" style="color: #ff4b4b;"></i>
+                        <h3>Failed to load orders</h3>
+                        <p>Please try refreshing the page</p>
+                    </div>
+                `;
             }
         }
         
@@ -339,7 +350,8 @@
             
             try {
                 const response = await fetch('/api/dining-orders/?status=Delivered,Cancelled');
-                const orders = await response.json();
+                const data = await response.json();
+                const orders = data.results || data; // Handle pagination
                 
                 if (orders.length === 0) {
                     container.innerHTML = `
@@ -374,14 +386,14 @@
                     </div>
                     
                     <div class="order-items">
-                        ${order.items ? order.items.map(item => `
+                        ${order.items_details ? order.items_details.map(item => `
                             <div class="order-item">
                                 <img src="${item.image || 'https://via.placeholder.com/60'}" alt="${item.name}" class="order-item-image">
                                 <div class="order-item-details">
                                     <div class="order-item-name">${item.name}</div>
-                                    <div class="order-item-meta">Qty: ${item.quantity}</div>
+                                    <div class="order-item-meta">${item.category || 'Food'}</div>
                                 </div>
-                                <div class="order-item-price">₹${item.price * item.quantity}</div>
+                                <div class="order-item-price">₹${item.price}</div>
                             </div>
                         `).join('') : '<p>No items</p>'}
                     </div>

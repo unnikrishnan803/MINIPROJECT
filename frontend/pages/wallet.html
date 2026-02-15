@@ -5,65 +5,205 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Wallet - Deliciae</title>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#FF6B35',
-                        secondary: '#FFC107',
-                        dark: '#0f0f0f',
-                        glass: 'rgba(255, 255, 255, 0.05)',
-                    },
-                    fontFamily: {
-                        outfit: ['Outfit', 'sans-serif'],
-                    }
-                }
-            }
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'css/global.css' %}" rel="stylesheet">
+    <style>
+        .wallet-card {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF4B2B 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
         }
-    </script>
-    
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="{% static 'css/global.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <!-- <link rel="stylesheet" href="{% static 'css/dashboard.css' %}"> -->
-    <style>body { background: #0f0f0f; color: white; }</style>
+        
+        .wallet-pattern {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle at 100% 0%, rgba(255,255,255,0.2) 0%, transparent 50%),
+                              radial-gradient(circle at 0% 100%, rgba(255,255,255,0.2) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .transaction-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .transaction-item:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .transaction-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+        }
+
+        .icon-credit {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+
+        .icon-debit {
+            background: rgba(255, 107, 53, 0.2);
+            color: #FF6B35;
+        }
+    </style>
 </head>
-<body>
+<body class="bg-black text-white">
     
     <div class="flex min-h-screen">
         <!-- Sidebar -->
         {% include 'components/sidebar.html' %}
         
         <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
-            <div class="main-container">
-                <div class="glass-panel" style="padding: var(--spacing-2xl); text-align: center; max-width: 600px; margin: 0 auto;">
-                    <i class="fas fa-wallet" style="font-size: 4rem; color: var(--primary); margin-bottom: var(--spacing-lg);"></i>
-                    <h1 class="text-gradient" style="margin-bottom: var(--spacing-md);">Deliciae Wallet</h1>
-                    <p style="color: var(--text-secondary); margin-bottom: var(--spacing-xl);">
-                        Manage your payments, view transaction history, and top up your balance.
-                        <br><br>
-                        <span class="badge badge-warning">Coming Soon</span>
-                    </p>
-                    <div style="background: var(--bg-card); padding: var(--spacing-lg); border-radius: var(--radius-lg); margin-top: var(--spacing-lg);">
-                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Current Balance</p>
-                        <h2 style="font-size: 2.5rem; color: var(--success);">₹0.00</h2>
-                        <button class="btn btn-primary" style="margin-top: var(--spacing-md);">Add Money</button>
+        <main class="flex-1 ml-0 md:ml-[240px] w-full md:w-[calc(100%-240px)] p-4 md:p-8 pb-24 md:pb-8">
+            {% include 'components/mobile_bottom_nav.html' %}
+            <div class="container mx-auto max-w-4xl pt-8">
+                
+                <!-- Header -->
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-1">My Wallet</h1>
+                        <p class="text-gray-400">Manage your balance and transactions</p>
+                    </div>
+                    <button class="bg-[#2a2a2a] hover:bg-[#333] text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2">
+                        <i class="fas fa-history"></i> History
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left Column: Card & Actions -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Wallet Card -->
+                        <div class="wallet-card text-white">
+                            <div class="wallet-pattern"></div>
+                            <div class="relative z-10">
+                                <div class="flex justify-between items-start mb-8">
+                                    <div>
+                                        <p class="text-white/80 text-sm font-medium mb-1">Total Balance</p>
+                                        <h2 class="text-4xl font-bold">₹{{ user.wallet_balance|default:"0.00" }}</h2>
+                                    </div>
+                                    <div class="bg-white/20 backdrop-blur-md p-2 rounded-lg">
+                                        <i class="fas fa-wallet text-2xl"></i>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs">
+                                            {{ user.username|slice:":1"|upper }}
+                                        </div>
+                                        <span class="font-medium tracking-wide">{{ user.username }}</span>
+                                    </div>
+                                    <span class="text-white/80 text-sm font-mono">**** 4289</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button onclick="addMoney()" class="bg-[#1a1a1a] hover:bg-[#252525] p-4 rounded-xl flex flex-col items-center gap-3 transition-all border border-white/5 group">
+                                <div class="w-12 h-12 rounded-full bg-[#FF6B35]/20 text-[#FF6B35] flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-plus"></i>
+                                </div>
+                                <span class="text-sm font-medium">Add Money</span>
+                            </button>
+                            <button class="bg-[#1a1a1a] hover:bg-[#252525] p-4 rounded-xl flex flex-col items-center gap-3 transition-all border border-white/5 group">
+                                <div class="w-12 h-12 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-paper-plane"></i>
+                                </div>
+                                <span class="text-sm font-medium">Send</span>
+                            </button>
+                            <button class="bg-[#1a1a1a] hover:bg-[#252525] p-4 rounded-xl flex flex-col items-center gap-3 transition-all border border-white/5 group">
+                                <div class="w-12 h-12 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-qrcode"></i>
+                                </div>
+                                <span class="text-sm font-medium">Scan</span>
+                            </button>
+                            <button class="bg-[#1a1a1a] hover:bg-[#252525] p-4 rounded-xl flex flex-col items-center gap-3 transition-all border border-white/5 group">
+                                <div class="w-12 h-12 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <i class="fas fa-gift"></i>
+                                </div>
+                                <span class="text-sm font-medium">Vouchers</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Recent Transactions -->
+                    <div class="bg-[#111] rounded-2xl p-6 border border-white/5">
+                        <h3 class="font-bold mb-4">Recent Activity</h3>
+                        
+                        <div class="space-y-2">
+                            <!-- Mock Data -->
+                            <div class="transaction-item">
+                                <div class="transaction-icon icon-debit">
+                                    <i class="fas fa-utensils"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-medium">Food Order #1024</h4>
+                                    <p class="text-xs text-gray-500">Today, 12:30 PM</p>
+                                </div>
+                                <span class="text-white font-medium">-₹450.00</span>
+                            </div>
+
+                            <div class="transaction-item">
+                                <div class="transaction-icon icon-credit">
+                                    <i class="fas fa-plus"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-medium">Wallet Top-up</h4>
+                                    <p class="text-xs text-gray-500">Yesterday</p>
+                                </div>
+                                <span class="text-[#2ecc71] font-medium">+₹1000.00</span>
+                            </div>
+
+                            <div class="transaction-item">
+                                <div class="transaction-icon icon-debit">
+                                    <i class="fas fa-coffee"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-medium">Starbucks</h4>
+                                    <p class="text-xs text-gray-500">Feb 12</p>
+                                </div>
+                                <span class="text-white font-medium">-₹350.00</span>
+                            </div>
+                            
+                            <div class="text-center mt-6">
+                                <button class="text-[#FF6B35] text-sm hover:underline">View All Transactions</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                </div>
-            </div> <!-- End Main Container -->
+
+            </div>
         </main>
     </div>
+
+    <!-- Scripts -->
+    <script>
+        function addMoney() {
+            const amount = prompt("Enter amount to add:");
+            if (amount && !isNaN(amount)) {
+                alert(`Redirecting to payment gateway for ₹${amount}...`);
+                // Mock success
+                setTimeout(() => {
+                    alert("Money added successfully! (Demo)");
+                    location.reload();
+                }, 1000);
+            }
+        }
+    </script>
 </body>
 </html>

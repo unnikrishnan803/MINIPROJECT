@@ -7,16 +7,33 @@ from .models import (
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'staff_restaurant']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'staff_restaurant', 'current_location', 'latitude', 'longitude', 'phone_number', 'profile_picture']
+        read_only_fields = ['username', 'role', 'email']
 
 class RestaurantSerializer(serializers.ModelSerializer):
     currency_symbol = serializers.CharField(source='user.currency_symbol', read_only=True)
     stats = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
+    maps_link = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = Restaurant
-        fields = ['id', 'name', 'cuisine_type', 'location', 'rating', 'image_url', 'currency_symbol', 'stats', 'is_following', 'latitude', 'longitude', 'is_open', 'opening_time', 'closing_time']
+        fields = ['id', 'name', 'cuisine_type', 'location', 'rating', 'image', 'image_url', 'currency_symbol', 'stats', 'is_following', 'latitude', 'longitude', 'is_open', 'opening_time', 'closing_time', 'maps_link']
+
+    def validate(self, attrs):
+        from .utils import extract_lat_long_from_url # Import locally to avoid circular import if utils uses models
+        
+        maps_link = attrs.get('maps_link')
+        if maps_link:
+            lat, lng = extract_lat_long_from_url(maps_link)
+            if lat and lng:
+                attrs['latitude'] = lat
+                attrs['longitude'] = lng
+            # We don't save maps_link to the model, so we can remove it from attrs if we want, 
+            # or just leave it since it's write_only and not on model.
+            # But better to clean up.
+            attrs.pop('maps_link', None)
+        return attrs
 
     def get_stats(self, obj):
         return {
@@ -56,12 +73,23 @@ class ReelSerializer(serializers.ModelSerializer):
     food_item_id = serializers.IntegerField(source='food_item.id', read_only=True)
     food_item_name = serializers.CharField(source='food_item.name', read_only=True)
     food_item_price = serializers.DecimalField(source='food_item.price', max_digits=10, decimal_places=2, read_only=True)
+    food_item_image = serializers.SerializerMethodField()
     is_following_restaurant = serializers.SerializerMethodField()
 
     class Meta:
         model = Reel
-        fields = ['id', 'restaurant', 'restaurant_name', 'restaurant_avatar', 'video_url', 'caption', 'likes_count', 'comments_count', 'is_liked', 'created_at', 'food_item', 'food_item_id', 'food_item_name', 'food_item_price', 'is_following_restaurant']
+        fields = ['id', 'restaurant', 'restaurant_name', 'restaurant_avatar', 'video_url', 'caption', 'likes_count', 'comments_count', 'is_liked', 'created_at', 'food_item', 'food_item_id', 'food_item_name', 'food_item_price', 'food_item_image', 'is_following_restaurant']
         read_only_fields = ['restaurant']
+
+    def get_food_item_image(self, obj):
+        if obj.food_item and obj.food_item.image:
+             try:
+                 return obj.food_item.image.url
+             except:
+                 return None
+        elif obj.food_item and obj.food_item.image_url:
+             return obj.food_item.image_url
+        return None
 
     def get_likes_count(self, obj):
         return obj.likes.count()
@@ -140,7 +168,7 @@ class OrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'restaurant', 'restaurant_name', 'restaurant_location', 'table', 'table_number', 'items', 'items_details', 'total_amount', 'status', 'created_at']
+        fields = ['id', 'customer', 'restaurant', 'restaurant_name', 'restaurant_location', 'table', 'table_number', 'items', 'items_details', 'total_amount', 'status', 'created_at', 'order_type', 'delivery_address']
         extra_kwargs = {
             'restaurant': {'read_only': True},
             'customer': {'read_only': True}

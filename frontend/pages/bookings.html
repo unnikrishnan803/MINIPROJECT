@@ -5,42 +5,150 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Bookings - Deliciae</title>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="{% static 'css/global.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'css/global.css' %}" rel="stylesheet">
 </head>
-<body>
+<body class="bg-black text-white">
     
     <div class="flex min-h-screen">
         <!-- Sidebar -->
         {% include 'components/sidebar.html' %}
         
         <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
-            <div class="main-container">
-                <div class="page-header relative mb-8">
-                    <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FF6B35] to-[#FFC107] mb-2">Table Bookings</h1>
-                    <p class="text-gray-400">Reserve tables at your favorite restaurants</p>
-                </div>
+        <main class="flex-1 ml-0 md:ml-[240px] w-full md:w-[calc(100%-240px)] p-4 md:p-8 pb-24 md:pb-8">
+            {% include 'components/mobile_bottom_nav.html' %}
+            <div class="container mx-auto max-w-5xl pt-8">
                 
-                <div class="bg-[#1a1a1a] border border-white/10 rounded-[18px] p-12 text-center max-w-2xl mx-auto">
-                    <i class="fas fa-calendar-check text-6xl text-[#FF6B35] mb-6 block"></i>
-                    <h3 class="text-xl font-semibold mb-2">No upcoming bookings</h3>
-                    <p class="text-gray-400 mb-8">You haven't made any table reservations yet.</p>
-                    <a href="{% url 'home' %}" class="inline-flex items-center gap-2 px-6 py-3 bg-[#FF6B35] hover:bg-[#ff8c61] text-white rounded-full font-medium transition-colors">
-                        Find Restaurants
+                <!-- Header -->
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-1">My Bookings</h1>
+                        <p class="text-gray-400">Manage your table reservations</p>
+                    </div>
+                    <a href="{% url 'home' %}" class="bg-[#FF6B35] hover:bg-[#e05a2b] text-white px-6 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg hover:shadow-orange-500/20">
+                        <i class="fas fa-plus"></i> New Booking
                     </a>
                 </div>
+
+                <!-- Bookings List -->
+                <div id="bookingsList" class="space-y-4">
+                    <!-- Loading State -->
+                    <div class="text-center py-12">
+                        <i class="fas fa-spinner fa-spin text-3xl text-[#FF6B35] mb-4"></i>
+                        <p class="text-gray-400">Loading your reservations...</p>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
+
+    <!-- Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', loadBookings);
+
+        async function loadBookings() {
+            const container = document.getElementById('bookingsList');
+            
+            try {
+                console.log('Fetching /api/bookings/ ...');
+                const response = await fetch('/api/bookings/');
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`Status: ${response.status} ${response.statusText} - ${text.substring(0, 100)}`);
+                }
+                
+                let bookingsData = await response.json();
+                const bookings = bookingsData.results || bookingsData;
+                
+                if (!Array.isArray(bookings) || bookings.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-16 bg-[#111] rounded-2xl border border-white/5">
+                            <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
+                                <i class="fas fa-calendar-times text-2xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">No Bookings Found</h3>
+                            <p class="text-gray-400 mb-6">You haven't made any table reservations yet.</p>
+                            <a href="{% url 'home' %}" class="text-[#FF6B35] hover:text-white font-medium transition-colors">Find a Restaurant</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = bookings.map(booking => `
+                    <div class="bg-[#111] hover:bg-[#1a1a1a] border border-white/5 rounded-2xl p-6 transition-all group relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold ${getStatusClass(booking.status)}">
+                                ${booking.status}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-start gap-6">
+                            <!-- Restaurant Image Placeholder -->
+                            <div class="w-16 h-16 rounded-xl bg-white/10 flex items-center justify-center text-2xl text-gray-500">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                            
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-white mb-2">Booking #${booking.id}</h3>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                    <div class="flex items-center gap-2 text-gray-400">
+                                        <i class="fas fa-calendar text-[#FF6B35]"></i>
+                                        <span>${new Date(booking.date_time).toLocaleDateString()}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-gray-400">
+                                        <i class="fas fa-clock text-[#FF6B35]"></i>
+                                        <span>${new Date(booking.date_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-gray-400">
+                                        <i class="fas fa-user-friends text-[#FF6B35]"></i>
+                                        <span>${booking.people_count} Guests</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-gray-400 col-span-full">
+                                        <i class="fas fa-chair text-[#FF6B35]"></i>
+                                        <span>Table ${booking.table_number || 'TBD'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col gap-2">
+                                <button class="bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-lg text-sm transition-colors border border-white/5">
+                                    View Details
+                                </button>
+                                ${booking.status === 'Confirmed' ? `
+                                    <button class="text-red-500 hover:text-red-400 text-sm px-4 py-2 hover:bg-red-500/10 rounded-lg transition-colors">
+                                        Cancel
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                container.innerHTML = `
+                    <div class="text-center py-12 text-red-500">
+                        <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+                        <p>Failed to load bookings.</p>
+                        <p class="text-sm mt-2 opacity-75">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function getStatusClass(status) {
+            switch(status.toLowerCase()) {
+                case 'confirmed': return 'bg-green-500/10 text-green-500';
+                case 'cancelled': return 'bg-red-500/10 text-red-500';
+                case 'completed': return 'bg-blue-500/10 text-blue-500';
+                default: return 'bg-gray-500/10 text-gray-400';
+            }
+        }
+    </script>
 </body>
 </html>

@@ -323,7 +323,8 @@
         {% include 'components/sidebar.html' %}
         
         <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
+        <main class="flex-1 ml-0 md:ml-[240px] w-full md:w-[calc(100%-240px)] p-4 md:p-8 pb-24 md:pb-8">
+            {% include 'components/mobile_bottom_nav.html' %}
             <div class="container" style="padding-top: var(--spacing-lg);">
                 <!-- Profile Header -->
                 <div class="profile-header">

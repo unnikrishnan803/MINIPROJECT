@@ -19,7 +19,8 @@ from django.urls import path, include
 from core.views import (
     IndexView, LoginView, RegisterView, DashboardView, KitchenView,
     HomeView, ReelsView, OrdersView, ProfileView, SettingsView, SearchView,
-    WalletView, BookingsView, OffersView  # New page views
+    WalletView, BookingsView, OffersView, RestaurantProfileView,
+    CartView, CheckoutView  # New page views
 )
 
 urlpatterns = [
@@ -42,6 +43,8 @@ urlpatterns = [
     path('wallet/', WalletView.as_view(), name='wallet'),
     path('bookings/', BookingsView.as_view(), name='bookings'),
     path('offers/', OffersView.as_view(), name='offers'),
+    path('cart/', CartView.as_view(), name='cart'),       # NEW
+    path('checkout/', CheckoutView.as_view(), name='checkout'), # NEW
     path('restaurant/<int:id>/', RestaurantProfileView.as_view(), name='restaurant_profile'),
     
     # Legacy Dashboard (for restaurant/staff)

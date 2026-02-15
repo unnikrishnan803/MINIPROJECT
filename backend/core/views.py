@@ -18,6 +18,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from math import radians, sin, cos, sqrt, asin
 
 class IndexView(TemplateView):
     template_name = "index.html"
@@ -57,9 +58,71 @@ class SettingsView(LoginRequiredMixin, TemplateView):
     template_name = "pages/settings.html"
     login_url = '/login/'
 
+from django.db.models import Q
+
 class SearchView(LoginRequiredMixin, TemplateView):
     """Search page"""
     template_name = "pages/search.html"
+    login_url = '/login/'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        query = self.request.GET.get('q', '')
+        filter_type = self.request.GET.get('type', 'all')
+        sort_by = self.request.GET.get('sort', '')
+        
+        context['query'] = query
+        context['filter_type'] = filter_type
+        context['sort_by'] = sort_by
+
+        restaurants = Restaurant.objects.all()
+        food_items = FoodItem.objects.all()
+
+        if query:
+            restaurants = restaurants.filter(
+                Q(name__icontains=query) | 
+                Q(cuisine_type__icontains=query) | 
+                Q(location__icontains=query)
+            ).distinct()
+            
+            food_items = food_items.filter(
+                Q(name__icontains=query) | 
+                Q(description__icontains=query) | 
+                Q(category__icontains=query) |
+                Q(restaurant__name__icontains=query)
+            ).select_related('restaurant').distinct()
+        else:
+            # Default ordering if no specific query
+            if not sort_by:
+                restaurants = restaurants.order_by('-rating')
+                food_items = food_items.order_by('-trend_score')
+
+        # Apply Sorting
+        if sort_by == 'top_rated':
+            restaurants = restaurants.order_by('-rating')
+            food_items = food_items.order_by('-popularity_score', '-trend_score') # Food doesn't have rating field in model yet, usage popularity/trend
+
+        # Apply Filtering (Type)
+        if filter_type == 'restaurants':
+            context['restaurants'] = restaurants[:20]
+            context['food_items'] = []
+        elif filter_type == 'dishes':
+            context['restaurants'] = []
+            context['food_items'] = food_items[:50]
+        else:
+            context['restaurants'] = restaurants[:20]
+            context['food_items'] = food_items[:50]
+            
+        return context
+
+class WalletView(LoginRequiredMixin, TemplateView):
+    """Wallet page"""
+    template_name = "pages/wallet.html"
+    login_url = '/login/'
+
+class BookingsView(LoginRequiredMixin, TemplateView):
+    """Bookings page"""
+    template_name = "pages/bookings.html"
     login_url = '/login/'
 
 # Import shortcut
@@ -87,35 +150,8 @@ class RestaurantProfileView(LoginRequiredMixin, TemplateView):
             context['is_following'] = False
             
         return context
-    """Search results page"""
-    template_name = "pages/search.html"
-    login_url = '/login/'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        query = self.request.GET.get('q', '')
-        context['query'] = query
-        
-        if query:
-            # Search Restaurants
-            # Search Restaurants
-            from django.db.models import Count
-            context['restaurants'] = Restaurant.objects.filter(
-                name__icontains=query, 
-                is_open=True
-            ).annotate(
-                followers_count=Count('followers', distinct=True),
-                reels_count=Count('reels', distinct=True),
-                menu_count=Count('menu_items', distinct=True)
-            )
-            
-            # Search Food Items
-            context['food_items'] = FoodItem.objects.filter(
-                name__icontains=query,
-                is_available=True
-            )
-            
-        return context
+
+
 
 class WalletView(LoginRequiredMixin, TemplateView):
     """User wallet page"""
@@ -125,6 +161,16 @@ class WalletView(LoginRequiredMixin, TemplateView):
 class BookingsView(LoginRequiredMixin, TemplateView):
     """Table bookings page"""
     template_name = "pages/bookings.html"
+    login_url = '/login/'
+
+class CartView(LoginRequiredMixin, TemplateView):
+    """Shopping Cart page"""
+    template_name = "pages/cart.html"
+    login_url = '/login/'
+
+class CheckoutView(LoginRequiredMixin, TemplateView):
+    """Checkout page"""
+    template_name = "pages/checkout.html"
     login_url = '/login/'
 
 class OffersView(LoginRequiredMixin, TemplateView):
@@ -179,10 +225,44 @@ class FoodItemViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
+        queryset = FoodItem.objects.all()
         user = self.request.user
+        
+        # Role-based filtering
         if user.is_authenticated and user.role == 'restaurant':
-            return FoodItem.objects.filter(restaurant__user=user)
-        return FoodItem.objects.all()
+            queryset = queryset.filter(restaurant__user=user)
+
+        # Location-based filtering (Optional)
+        lat = self.request.query_params.get('lat')
+        lng = self.request.query_params.get('lng')
+        radius = self.request.query_params.get('radius') # in km
+
+        if lat and lng and radius:
+            try:
+                lat = float(lat)
+                lng = float(lng)
+                radius = float(radius)
+                
+                # Bounding Box Calculation (Approximate)
+                # 1 degree lat ~= 111km
+                degree_delta = radius / 111.0
+                
+                lat_min = lat - degree_delta
+                lat_max = lat + degree_delta
+                # Longitude correction (cos(lat))
+                # optimization: just use max degree delta for lng too (slightly larger box is fine)
+                lng_min = lng - degree_delta
+                lng_max = lng + degree_delta
+
+                queryset = queryset.filter(
+                    restaurant__latitude__range=(lat_min, lat_max),
+                    restaurant__longitude__range=(lng_min, lng_max)
+                )
+            except ValueError:
+                pass # Ignore invalid params
+
+        return queryset
+
 
     def perform_create(self, serializer):
         # Automatically set the restaurant from the logged-in user
@@ -223,14 +303,8 @@ class FoodListView(generics.ListAPIView):
         if location:
             # Explicit filter from UI
             queryset = queryset.filter(restaurant__location__icontains=location)
-        elif self.request.user.is_authenticated and self.request.user.current_location:
-            # Auto-filter by user's location (Nearby)
-            # You might want to make this optional or a default separate section
-            # For now, if no explicit location is asked, prioritize nearby?
-            # Or maybe only if a 'nearby' param is passed? 
-            # The user asked: "share user nearby location based on hotel sets"
-            # Let's assume the main feed SHOULD be location based.
-            queryset = queryset.filter(restaurant__location__icontains=self.request.user.current_location)
+        # REMOVED LEGACY TEXT-BASED NEARBY LOGIC
+        # Now relying strictly on GPS-based NearbyRestaurantsAPIView
             
         return queryset
 
@@ -246,8 +320,9 @@ class RestaurantViewSet(viewsets.ReadOnlyModelViewSet):
         if search:
             queryset = queryset.filter(name__icontains=search)
         
-        if location:
-            queryset = queryset.filter(location__icontains=location)
+        # REMOVED LEGACY LOCATION FILTER
+        # if location:
+        #    queryset = queryset.filter(location__icontains=location)
             
         return queryset
 
@@ -727,26 +802,32 @@ class NearbyRestaurantsAPIView(APIView):
         try:
             user_lat = float(request.query_params.get('lat'))
             user_lng = float(request.query_params.get('lng'))
-            radius_km = float(request.query_params.get('radius', 5.0))
+            radius_km = float(request.query_params.get('radius', 20.0)) # Default to 20km as requested
         except (TypeError, ValueError):
             return Response(
                 {"error": "Invalid latitude, longitude, or radius Parameters. Must be numbers."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Optimization: First filter by a rough bounding box to avoid Haversine on all rows
-        # 1 deg lat ~= 111km. 1 deg lng ~= 111km * cos(lat)
-        # 5km is roughly 0.045 degrees. Let's use 0.1 deg (~11km) as a safe bounding box.
-        lat_min = user_lat - 0.1
-        lat_max = user_lat + 0.1
-        lng_min = user_lng - 0.1
-        lng_max = user_lng + 0.1
+        # Optimization: First filter by a rough bounding box
+        # 1 deg lat ~= 111km. 
+        degrees_delta = radius_km / 111.0
+        # Add a small buffer for edge cases, but keep it tight
+        degrees_delta *= 1.1 
+        
+        lat_min = user_lat - degrees_delta
+        lat_max = user_lat + degrees_delta
+        lng_min = user_lng - degrees_delta
+        lng_max = user_lng + degrees_delta
+
+        print(f"DEBUG: Bounding Box: {lat_min} to {lat_max}, {lng_min} to {lng_max}")
 
         candidates = Restaurant.objects.filter(
             latitude__range=(lat_min, lat_max),
             longitude__range=(lng_min, lng_max),
             is_open=True
         )
+        print(f"DEBUG: Candidates found: {candidates.count()}")
 
         nearby_restaurants = []
 
@@ -763,13 +844,44 @@ class NearbyRestaurantsAPIView(APIView):
             r = 6371 # Radius of earth in kilometers
             distance = c * r
 
+            print(f"DEBUG: User Location: {user_lat}, {user_lng} | Radius: {radius_km}")
+
             if distance <= radius_km:
+                print(f"DEBUG: Keeping {restaurant.name} (Dist: {distance:.2f}km)")
                 serializer = RestaurantSerializer(restaurant, context={'request': request})
                 data = serializer.data
                 data['distance_km'] = round(distance, 2)
                 nearby_restaurants.append(data)
+            else:
+                print(f"DEBUG: Skipping {restaurant.name} (Dist: {distance:.2f}km > {radius_km}km)")
 
         # Sort by distance
         nearby_restaurants.sort(key=lambda x: x['distance_km'])
 
         return Response(nearby_restaurants)
+
+class RestaurantProfileUpdateView(generics.UpdateAPIView):
+    serializer_class = RestaurantSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        # Ensure the user has a restaurant profile
+        if not hasattr(self.request.user, 'restaurant_profile'):
+             raise serializers.ValidationError("User is not a restaurant.")
+        return self.request.user.restaurant_profile
+
+    def update(self, request, *args, **kwargs):
+        # Handle 'image' file upload specifically if present
+        # The serializer handles it, but we need to ensure request.FILES is used
+        return super().update(request, *args, **kwargs)
+
+class UserUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

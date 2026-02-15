@@ -2,13 +2,13 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from core.views import (
     IndexView, LoginView, RegisterView, DashboardView,
-    HomeView, ReelsView, OrdersView, ProfileView, SettingsView,  # New page views
+    HomeView, ReelsView, OrdersView, ProfileView, SettingsView, WalletView, BookingsView,  # New page views
     FoodItemViewSet, available_food_items, toggle_food_availability,
     TableViewSet, BookingViewSet, DiningOrderViewSet, BillingView,
     FoodListView, KitchenView, RestaurantViewSet,
     ReelViewSet, FollowViewSet,
     OfferViewSet, NotificationViewSet, RestaurantCrowdViewSet, update_crowd_status,
-    NearbyRestaurantsAPIView,
+    NearbyRestaurantsAPIView, RestaurantProfileUpdateView, UserUpdateAPIView,
 )
 from .ai_views import RecommendationView, SmartHighlightsView, SellingOutView
 
@@ -33,11 +33,12 @@ urlpatterns = [
     path('food/', FoodListView.as_view(), name='food-list'),
     path('food/available/', available_food_items, name='available_food_items'),
     path('food/<int:pk>/toggle/', toggle_food_availability, name='toggle_food_availability'),
-    path('kitchen-view/', KitchenView.as_view(), name='kitchen-view'),
     path('api/billing/', BillingView.as_view(), name='billing'),
     path('crowd/update/', update_crowd_status, name='update-crowd-status'),
     path('recommendations/', RecommendationView.as_view(), name='recommendations'),
     path('smart-highlights/', SmartHighlightsView.as_view(), name='smart-highlights'),
     path('selling-out/', SellingOutView.as_view(), name='selling-out'),
     path('nearby-restaurants/', NearbyRestaurantsAPIView.as_view(), name='nearby-restaurants'),
+    path('restaurant/profile/', RestaurantProfileUpdateView.as_view(), name='restaurant-profile-update'),
+    path('user/update/', UserUpdateAPIView.as_view(), name='user-update'),
 ]

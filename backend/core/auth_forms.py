@@ -29,6 +29,7 @@ class CustomSignupForm(SignupForm):
     opening_time = forms.TimeField(required=False, widget=forms.TimeInput(attrs={'type': 'time'}))
     closing_time = forms.TimeField(required=False, widget=forms.TimeInput(attrs={'type': 'time'}))
     restaurant_image_url = forms.URLField(required=False, widget=forms.TextInput(attrs={'placeholder': 'Image URL'}))
+    maps_link = forms.URLField(required=False, widget=forms.TextInput(attrs={'placeholder': 'Google Maps Link (for auto-location)'}))
 
     def save(self, request):
         user = super(CustomSignupForm, self).save(request)
@@ -51,6 +52,14 @@ class CustomSignupForm(SignupForm):
 
         if user.role == 'restaurant':
             from .models import Restaurant
+            from .utils import extract_lat_long_from_url
+            
+            # Auto-detect coordinates
+            lat, lng = None, None
+            maps_link = self.cleaned_data.get('maps_link')
+            if maps_link:
+                lat, lng = extract_lat_long_from_url(maps_link)
+            
             # Create Restaurant Profile
             Restaurant.objects.create(
                 user=user,
@@ -60,6 +69,8 @@ class CustomSignupForm(SignupForm):
                 opening_time=self.cleaned_data.get('opening_time'),
                 closing_time=self.cleaned_data.get('closing_time'),
                 cuisine_type='General', # Default
-                is_open=True
+                is_open=True,
+                latitude=lat,
+                longitude=lng
             )
         return user

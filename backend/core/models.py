@@ -21,6 +21,7 @@ class User(AbstractUser):
     longitude = models.FloatField(blank=True, null=True)
     country = models.CharField(max_length=100, default='India')
     currency_symbol = models.CharField(max_length=5, default='₹')
+    wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def get_profile_picture(self):
         """
@@ -35,8 +36,12 @@ class User(AbstractUser):
             return self.profile_picture
 
         # Check restaurant profile
-        if hasattr(self, 'restaurant_profile') and self.restaurant_profile.image_url:
-            return self.restaurant_profile.image_url
+        # Check restaurant profile
+        if hasattr(self, 'restaurant_profile'):
+            if self.restaurant_profile.image:
+                return self.restaurant_profile.image.url
+            if self.restaurant_profile.image_url:
+                return self.restaurant_profile.image_url
 
         # Check social account
         social = self.socialaccount_set.first()
@@ -55,6 +60,7 @@ class Restaurant(models.Model):
     longitude = models.FloatField(blank=True, null=True)
     rating = models.FloatField(default=0.0)
     is_open = models.BooleanField(default=True)
+    image = models.ImageField(upload_to='restaurant_profiles/', blank=True, null=True)
     image_url = models.URLField(blank=True, null=True)
     opening_time = models.TimeField(blank=True, null=True)
     closing_time = models.TimeField(blank=True, null=True)
@@ -130,9 +136,16 @@ class Order(models.Model):
     STATUS_CHOICES = [
         ('Ordered', 'Ordered'),
         ('Preparing', 'Preparing'),
-        ('Served', 'Served'),
+        ('Served', 'Served'), # For Dining
+        ('Out for Delivery', 'Out for Delivery'), # For Delivery
+        ('Delivered', 'Delivered'), # For Delivery
         ('Paid', 'Paid'),
     ]
+    ORDER_TYPE_CHOICES = [
+        ('dining', 'Dining'),
+        ('delivery', 'Delivery'),
+    ]
+    
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', null=True, blank=True) # Optional for walk-ins
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='orders')
     table = models.ForeignKey(Table, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
@@ -140,6 +153,11 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Ordered')
     bill = models.ForeignKey(Bill, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    
+    # New Fields for Delivery
+    order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default='dining')
+    delivery_address = models.TextField(blank=True, null=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
 class FoodAnalytics(models.Model):

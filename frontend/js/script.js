@@ -88,23 +88,34 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("fetchRestaurants called");
         const restaurantGrid = document.getElementById('restaurantGrid');
         if (!restaurantGrid) {
-            console.error("restaurantGrid not found");
+            // console.error("restaurantGrid not found"); // Supress if not on home
             return;
         }
         
         restaurantGrid.innerHTML = '<div style="color:var(--text-secondary); padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading Restaurants...</div>';
         
         const searchInput = document.getElementById('searchInput');
-        const locationInput = document.getElementById('locationInput');
+        // const locationInput = document.getElementById('locationInput'); // Removed
         const query = searchInput ? searchInput.value : '';
-        const location = locationInput ? locationInput.value : '';
+        // const location = locationInput ? locationInput.value : ''; // Removed
         
         console.log(`Fetching restaurants: query="${query}", location="${location}"`);
 
         try {
-            let url = `/api/restaurants/?`; // Note: adjust if your URL path is different
+            let url = `/api/restaurants/?`; 
+            
+            // STRICT GPS LOGIC
+            // Use global userLat and userLng set by detectLocation
+            if (window.userLat && window.userLng) {
+                url = `/api/nearby-restaurants/?lat=${window.userLat}&lng=${window.userLng}&radius=20&`;
+            } else {
+                 // Fallback to all restaurants if no GPS
+                 url = `/api/restaurants/?`;
+            }
+
             if (query) url += `search=${encodeURIComponent(query)}&`;
-            if (location) url += `location=${encodeURIComponent(location)}&`;
+            // Location param removed as per user request
+
 
             const response = await fetch(url);
             if (!response.ok) throw new Error("API Connection Failed");
@@ -123,40 +134,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderRestaurants(items) {
-        const restaurantGrid = document.getElementById('restaurantGrid');
-        if(!restaurantGrid) return;
-        restaurantGrid.innerHTML = '';
-        if (items.length === 0) {
-            restaurantGrid.innerHTML = '<div style="color:gray; padding:20px;">No restaurants found in this area.</div>';
+    function renderRestaurants(restaurants) {
+        const grid = document.getElementById('restaurantGrid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+
+        if (restaurants.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full text-center text-gray-400 py-10 bg-white/5 rounded-xl border border-white/10">
+                    <i class="fas fa-map-marker-alt text-4xl mb-4 text-gray-600"></i>
+                    <p class="text-lg">No open restaurants found near you.</p>
+                    <p class="text-sm text-gray-500 mt-2">Try increasing the search radius or check back later.</p>
+                </div>
+            `;
             return;
         }
 
-        items.forEach(rest => {
-            const card = document.createElement('div');
-            card.className = 'glass-card food-card'; // Reusing food card style for simplicity
+        const html = restaurants.map(restaurant => {
+            // Default image fallback
+            const imageUrl = restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
             
-            // Image Fallback
-            const imgUrl = rest.image_url || 'https://placehold.co/600x400/111/FFF?text=' + encodeURIComponent(rest.name);
-            const cuisine = rest.cuisine_type || 'Restaurant';
-            const loc = rest.location || 'Unknown';
-            const rating = rest.rating || 'N/A';
+            // Format time (remove seconds)
+            const openTime = (restaurant.opening_time || '10:00').slice(0, 5);
+            const closeTime = (restaurant.closing_time || '22:00').slice(0, 5);
+            
+            // Distance Badge Logic
+            const distanceBadge = restaurant.distance_km 
+                ? `<div class="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10 flex items-center gap-1 shadow-sm">
+                       <i class="fas fa-location-arrow text-[#FF6B35]"></i> ${restaurant.distance_km} km
+                   </div>` 
+                : '';
 
-            card.innerHTML = `
-                <div class="card-img-container" style="cursor: pointer;" onclick="window.location.href='/restaurant/${rest.id}/'">
-                    <img src="${imgUrl}" alt="${rest.name}" style="height: 150px; object-fit: cover;">
-                    <div class="badge" style="top:10px; right:10px; background: rgba(0,0,0,0.7);"><i class="fas fa-star" style="color:gold;"></i> ${rating}</div>
-                </div>
-                <div class="card-details">
-                    <h4 style="cursor: pointer;" onclick="window.location.href='/restaurant/${rest.id}/'">${rest.name}</h4>
-                    <p class="restaurant-name" style="color: var(--accent-primary);">${cuisine}</p>
-                    <div class="card-meta">
-                         <span><i class="fas fa-map-marker-alt"></i> ${loc}</span>
+            return `
+                <div class="bg-[#1a1a1a] border border-white/10 rounded-[18px] overflow-hidden hover:border-[#FF6B35]/50 transition-all group shadow-lg hover:shadow-[#FF6B35]/10">
+                    <div class="relative h-48 overflow-hidden cursor-pointer" onclick="window.location.href='/restaurant/${restaurant.id}/'">
+                        <img src="${imageUrl}" alt="${restaurant.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
+                        
+                        <div class="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10 shadow-sm">
+                            <i class="fas fa-clock text-[#FF6B35] mr-1"></i> ${openTime} - ${closeTime}
+                        </div>
+                        ${distanceBadge}
+                    </div>
+                    
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-white group-hover:text-[#FF6B35] transition-colors cursor-pointer" onclick="window.location.href='/restaurant/${restaurant.id}/'">${restaurant.name}</h3>
+                            <div class="flex items-center gap-1 bg-[#FF6B35]/10 px-2 py-0.5 rounded-lg border border-[#FF6B35]/20">
+                                <span class="text-[#FF6B35] font-bold text-sm">${restaurant.rating || 'New'}</span>
+                                <i class="fas fa-star text-[10px] text-[#FF6B35]"></i>
+                            </div>
+                        </div>
+                        
+                        <p class="text-gray-400 text-sm mb-4 line-clamp-1 flex items-center gap-1">
+                            <i class="fas fa-map-pin text-gray-600"></i> ${restaurant.location || 'Location not available'}
+                        </p>
+                        
+                        <div class="flex items-center justify-between pt-4 border-t border-white/10">
+                            <div class="text-xs text-gray-400 font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5 uppercase tracking-wide">
+                                ${restaurant.cuisine_type || 'Multi-Cuisine'}
+                            </div>
+                            <a href="/restaurant/${restaurant.id}/" class="text-white text-sm font-semibold hover:text-[#FF6B35] transition-colors flex items-center gap-2 group/btn">
+                                View Restaurant <i class="fas fa-arrow-right transform group-hover/btn:translate-x-1 transition-transform"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
             `;
-            restaurantGrid.appendChild(card);
-        });
+        }).join('');
+
+        grid.innerHTML = html;
+        grid.classList.add('animate-fade-in');
     }
 
     // 1. Fetch Food Logic
@@ -167,15 +216,16 @@ document.addEventListener('DOMContentLoaded', () => {
         foodGrid.innerHTML = '<div style="color:var(--text-secondary); text-align:center; grid-column:1/-1;"><i class="fas fa-spinner fa-spin"></i> Loading Fresh Data...</div>';
         
         const searchInput = document.getElementById('searchInput');
-        const locationInput = document.getElementById('locationInput');
+        // const locationInput = document.getElementById('locationInput'); // Removed
         
         const query = searchInput ? searchInput.value : '';
-        const location = locationInput ? locationInput.value : '';
+        // const location = locationInput ? locationInput.value : ''; // Removed
 
         try {
             let url = `${API_BASE}?`;
             if (query) url += `search=${encodeURIComponent(query)}&`;
-            if (location) url += `location=${encodeURIComponent(location)}&`;
+            // Location param removed as per user request
+
 
             console.log("Fetching:", url); // Debug
             const response = await fetch(url);
@@ -197,8 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 2. Render Cards
+    window.allFoodItems = {}; // Global store for cart access
+
     function renderFood(items) {
         // Clear containers
+        const foodGrid = document.getElementById('foodGrid');
+        if(!foodGrid) return; 
+
         foodGrid.innerHTML = '';
         const trendingGrid = document.getElementById('trendingGrid');
         if(trendingGrid) trendingGrid.innerHTML = '';
@@ -208,6 +263,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if(trendingGrid) trendingGrid.innerHTML = '<div style="color:gray; padding:20px;">No trending items in this area.</div>';
             return;
         }
+
+        // Store items for lookup
+        items.forEach(item => {
+            window.allFoodItems[item.id] = item;
+        });
 
         // Sort for Trending (High Trend Score first)
         const trendingItems = [...items].sort((a, b) => b.trend_score - a.trend_score).slice(0, 10);
@@ -242,29 +302,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const card = document.createElement('div');
         card.className = `glass-card food-card ${!isAvailable ? 'sold-out-card' : ''}`;
         
+         // AI Recommendation Logic (Mock + Real)
+        const isAiRecommended = item.is_ai_recommended || (Math.random() > 0.8 && isAvailable && quantity > 0); 
+        
+        if (isAiRecommended) {
+             card.classList.add('ai-border-gradient');
+        }
+
         // Generate mock trend badge for high scores
         const trendBadge = item.trend_score > 6.0 ? '<div class="badge trending"><i class="fas fa-chart-line"></i> Trending</div>' : '';
+        
+        // AI Badge
+        const aiBadge = isAiRecommended ? `
+            <div class="absolute top-3 left-3 z-20 animate-pulse">
+                <span class="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg border border-blue-400/30 backdrop-blur-md">
+                    <i class="fas fa-robot"></i> AI Pick
+                </span>
+            </div>
+        ` : '';
+
         const btnState = isAvailable && quantity > 0 ? '' : 'disabled';
         const btnText = isAvailable && quantity > 0 ? 'Order Now' : 'Unavailable';
         
-        // Smart Image Matching - prioritize uploaded image
+        let userLat = null;
+        let userLng = null;
+
+// Cart State Matching - prioritize uploaded image
         const imgUrl = item.image || item.image_url || getFoodImage(item.name);
         
         // Media Content (Image or Video)
         let mediaContent;
         if (item.video_url) {
              mediaContent = `
-                <video controls style="width:100%; height:200px; object-fit:cover; border-radius:12px 12px 0 0;" poster="${imgUrl}">
-                    <source src="${item.video_url}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-                ${!isAvailable ? '<div class="badge sold-out" style="top:10px; right:10px;">Sold Out</div>' : trendBadge}
+                <div class="relative">
+                    <video controls style="width:100%; height:200px; object-fit:cover; border-radius:12px 12px 0 0;" poster="${imgUrl}">
+                        <source src="${item.video_url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    ${!isAvailable ? '<div class="badge sold-out" style="top:10px; right:10px;">Sold Out</div>' : trendBadge}
+                    ${aiBadge}
+                </div>
              `;
         } else {
             mediaContent = `
-                <div class="card-img-container">
+                <div class="card-img-container relative">
                     <img src="${imgUrl}" alt="${item.name}" onerror="this.onerror=null; this.src='https://placehold.co/600x400/222222/EDEDED?text=Deliciae+Food'">
                     ${!isAvailable ? '<div class="badge sold-out">Sold Out</div>' : trendBadge}
+                    ${aiBadge}
                 </div>
             `;
         }
@@ -320,59 +404,120 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Detect Location (Mock + API)
     // 4. Detect Location (Real Geocoding)
+    // 4. Detect Location (Real Geocoding + Manual Input)
+    window.handleManualLocationInput = function(event) {
+        if (event.key === 'Enter') {
+            const city = event.target.value.trim();
+            if (city) {
+                geocodeCity(city);
+            }
+        }
+    };
+
+    window.geocodeCity = async function(city) {
+        const input = document.getElementById('manualLocationInput');
+        if(input) input.disabled = true;
+        
+        try {
+            // Using OpenStreetMap Nominatim for geocoding
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}`);
+            const data = await response.json();
+
+            if (data && data.length > 0) {
+                window.userLat = parseFloat(data[0].lat);
+                window.userLng = parseFloat(data[0].lon);
+                console.log(`Manual Location set to: ${city} (${window.userLat}, ${window.userLng})`);
+                
+                // Refresh Data
+                fetchFood();
+                fetchRestaurants();
+                if (window.refreshHomeSections) window.refreshHomeSections();
+                
+                // Visual Feedback
+                if(input) {
+                    input.value = data[0].display_name.split(',')[0]; // Show detected city name
+                    input.style.borderColor = '#4ade80'; // Green border
+                    setTimeout(() => input.style.borderColor = '', 2000);
+                }
+            } else {
+                alert("City not found! Please check spelling.");
+                if(input) input.style.borderColor = '#ef4444'; // Red border
+            }
+        } catch (error) {
+            console.error("Geocoding failed:", error);
+            alert("Failed to find location. Please try again.");
+        } finally {
+             if(input) input.disabled = false;
+             if(input) input.focus();
+        }
+    };
+
     window.detectLocation = function() {
-        const btn = document.querySelector('button[onclick="detectLocation()"]');
-        const originalHtml = btn ? btn.innerHTML : '<i class="fas fa-location-arrow"></i>';
-        if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const input = document.getElementById('manualLocationInput');
+        if(input) input.placeholder = "Locating...";
         
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const { latitude, longitude } = position.coords;
+                 async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    window.userLat = lat;
+                    window.userLng = lng;
+                    
+                    // Reverse Geocode for display name
                     try {
-                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
                         const data = await response.json();
-                        // Prioritize city > town > village > county
-                        const detectedLoc = data.address.city || data.address.town || data.address.village || data.address.county || "Kochi";
+                        const cityName = data.address.city || data.address.town || data.address.village || "Current Location";
                         
-                        if(locationInput) locationInput.value = detectedLoc;
-                        fetchFood(); 
-                        fetchRestaurants(); 
-                        // alert(`📍 Location Detected: ${detectedLoc}`);
-                    } catch (err) {
-                        console.error(err);
-                        alert("⚠️ Failed to fetch address. Falling back to default.");
-                        if(locationInput) locationInput.value = "Kochi";
-                    } finally {
-                        if(btn) btn.innerHTML = originalHtml;
+                        if(input) input.value = cityName;
+                    } catch (e) {
+                         console.warn("Reverse geocoding failed:", e);
+                         if(input) input.value = "Current Location";
+                         // Ensure no alert is shown here
                     }
+
+                    fetchFood(); 
+                    fetchRestaurants(); 
+                    if (window.refreshHomeSections) window.refreshHomeSections();
                 },
                 (error) => {
                     console.error(error);
-                    alert("⚠️ Location access denied. Falling back to 'Kochi'.");
-                    if(locationInput) locationInput.value = "Kochi";
-                    fetchFood();
-                    fetchRestaurants();
-                    if(btn) btn.innerHTML = originalHtml;
+                    alert("⚠️ Location access denied. Please enter manually.");
+                    if(input) input.placeholder = "Enter City Name manually";
                 }
             );
         } else {
             alert("Geolocation is not supported by this browser.");
-            if(btn) btn.innerHTML = originalHtml;
         }
     }
 
     // Initialize on DOM Ready
     document.addEventListener('DOMContentLoaded', () => {
         const searchInput = document.getElementById('searchInput');
-        const locationInput = document.getElementById('locationInput');
+        // const locationInput = document.getElementById('locationInput'); // Removed
         
         if (searchInput) searchInput.addEventListener('input', triggerFetch);
-        if (locationInput) locationInput.addEventListener('input', triggerFetch);
+        // if (locationInput) locationInput.addEventListener('input', triggerFetch); // Removed
 
         console.log("Script initializing...");
-        fetchFood();
-        fetchRestaurants();
+        DetectLocationOnLoad();
+        
+        function DetectLocationOnLoad() {
+             // We can just call detectLocation() but maybe we want to avoid double fetch if it's fast?
+             // Actually script.js detectLocation calls fetchRestaurants on success.
+             // So let's NOT blindly call fetchRestaurants() here if we expect detectLocation to work?
+             // But if detectLocation is denied, we need to show something.
+             // detectLocation handles error/denial by calling fetch... 
+             // So let's try calling ONLY detectLocation() and see.
+             // But to be safe, we can call fetchRestaurants() immediately (shows 'loading' or 'all') and then detectLocation refreshes it.
+             detectLocation();
+        }
+        
+        // fetchFood(); // detectLocation calls this
+        // fetchRestaurants(); // detectLocation calls this
+        updateCartBadge(); // Init Badge
     });
 
     // Clean up restaurant dashboard mock just in case (Keep if needed)
@@ -800,6 +945,7 @@ function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
             if (cookie.substring(0, name.length + 1) === (name + '=')) {
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
@@ -809,286 +955,89 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// --- BOOKINGS & ORDERS LOGIC ---
-async function fetchBookings() {
-    const container = document.getElementById('bookingsContainer');
-    if (!container) return;
+// --- CART FUNCTIONS ---
+
+window.addToCart = function(id, name, price, restaurantId, restaurantName, imageUrl) {
+    // 1. Try to get full object from global store
+    let item = window.allFoodItems[id];
     
-    container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Loading your bookings...</div>';
-    
-    try {
-        const response = await fetch('/api/bookings/');
-        if (!response.ok) throw new Error('Failed to fetch bookings');
-        
-        const bookings = await response.json();
-        
-        if (bookings.length === 0) {
-            container.innerHTML = `
-                <div class="glass-card" style="padding: 3rem; text-align: center;">
-                    <i class="fas fa-calendar-times" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
-                    <h3 style="color: var(--text-secondary);">No Bookings Yet</h3>
-                    <p style="color: var(--text-secondary); opacity: 0.7;">Your table reservations will appear here.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        container.innerHTML = '';
-        bookings.forEach(booking => {
-            const bookingCard = document.createElement('div');
-            bookingCard.className = 'glass-card';
-            bookingCard.style.cssText = 'padding: 1.5rem; margin-bottom: 1rem;';
-            
-            const bookingDate = new Date(booking.date_time);
-            const formattedDate = bookingDate.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
-            const formattedTime = bookingDate.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            const statusColor = booking.status === 'Confirmed' ? '#4cd137' : 
-                               booking.status === 'Cancelled' ? '#e74c3c' : '#f39c12';
-            
-            bookingCard.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
-                    <div>
-                        <h3 style="margin-bottom: 0.5rem;">${booking.restaurant_name || 'Restaurant'}</h3>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                            <i class="fas fa-calendar"></i> ${formattedDate}
-                        </p>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                            <i class="fas fa-clock"></i> ${formattedTime}
-                        </p>
-                    </div>
-                    <div style="text-align: right;">
-                        <span style="background: ${statusColor}; color: white; padding: 0.3rem 0.8rem; border-radius: 15px; font-size: 0.8rem; font-weight: 600;">
-                            ${booking.status}
-                        </span>
-                    </div>
-                </div>
-                <div style="display: flex; gap: 2rem; color: var(--text-secondary); font-size: 0.9rem;">
-                    <span><i class="fas fa-users"></i> ${booking.people_count} ${booking.people_count === 1 ? 'Person' : 'People'}</span>
-                    ${booking.table_number ? `<span><i class="fas fa-chair"></i> Table ${booking.table_number}</span>` : ''}
-                </div>
-            `;
-            
-            container.appendChild(bookingCard);
-        });
-        
-    } catch (error) {
-        console.error('Error fetching bookings:', error);
-        container.innerHTML = `<div style="color:red; text-align:center; padding:20px;">Failed to load bookings.</div>`;
+    // 2. If not found, check if details were passed directly (Server-Rendered Pages)
+    if (!item && name && price) {
+        item = {
+            id: id,
+            name: name,
+            price: parseFloat(price),
+            restaurant: {
+                id: restaurantId,
+                name: restaurantName || 'Unknown Restaurant'
+            },
+            image: imageUrl || null
+        };
     }
-}
 
-// --- REEL UPLOAD LOGIC ---
-function openUploadReelModal() {
-    document.getElementById('uploadReelModal').style.display = 'block';
-}
-
-function closeUploadReelModal() {
-    document.getElementById('uploadReelModal').style.display = 'none';
-}
-
-async function handleReelUpload(event) {
-    event.preventDefault();
-    
-    const fileInput = document.getElementById('reelVideoFile');
-    const captionInput = document.getElementById('reelCaption');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Please select a video file.');
+    if (!item) {
+        console.error("Item not found:", id);
+        // Fallback for profile page items if not in main list (TODO: improved lookup)
+        // Check if currentProfileData exists
+        if(window.currentProfileData && window.currentProfileData.menu) {
+             const profileItem = window.currentProfileData.menu.find(i => i.id === id);
+             if(profileItem) {
+                 addItemToLocalStorage(profileItem);
+                 return;
+             }
+        }
         return;
     }
-    
-    const formData = new FormData();
-    formData.append('video_file', file);
-    formData.append('caption', captionInput.value);
-    
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Uploading...';
-    submitBtn.disabled = true;
-    
-    try {
-        const response = await fetch('/api/reels/upload/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: formData
+    addItemToLocalStorage(item);
+};
+
+function addItemToLocalStorage(item) {
+    const cart = JSON.parse(localStorage.getItem('deliciae_cart') || '[]');
+    const existingIndex = cart.findIndex(i => i.id === item.id);
+
+    if (existingIndex > -1) {
+        cart[existingIndex].quantity += 1;
+    } else {
+        cart.push({
+            id: item.id,
+            name: item.name,
+            price: parseFloat(item.price),
+            quantity: 1,
+            image: item.image || item.image_url || getFoodImage(item.name),
+            restaurant: item.restaurant ? item.restaurant.name : (window.currentProfileData ? window.currentProfileData.restaurant.name : 'Deliciae Kitchen')
         });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Upload failed');
-        }
-        
-        const data = await response.json();
-        alert('Reel uploaded successfully!');
-        closeUploadReelModal();
-        event.target.reset();
-        
-        // Refresh reels if on reels view
-        if (typeof currentSection !== 'undefined' && currentSection === 'reels-view') {
-           if(typeof fetchReels !== 'undefined') fetchReels();
-        }
-        
-    } catch (error) {
-        console.error('Error uploading reel:', error);
-        alert('Failed to upload reel: ' + error.message);
-    } finally {
-        submitBtn.innerText = originalText;
-        submitBtn.disabled = false;
     }
+
+    localStorage.setItem('deliciae_cart', JSON.stringify(cart));
+    
+    // Dispatch event for other listeners
+    window.dispatchEvent(new Event('storage'));
+
+    // Visual Feedback (Toast)
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-[#FF6B35] text-white px-6 py-3 rounded-lg shadow-xl z-50 animate-bounce flex items-center gap-2 font-bold';
+    toast.innerHTML = `<i class="fas fa-cart-plus"></i> Added ${item.name}!`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+    
+    // Update Badge
+    updateCartBadge();
 }
 
-// --- BOOKING MODAL LOGIC ---
-window.openBookingModal = function(restaurantId, restaurantName) {
-    const modal = document.getElementById('bookingModal');
-    const nameEl = document.getElementById('bookingRestaurantName');
-    const idInput = document.getElementById('bookingRestaurantId');
-    const dateInput = document.getElementById('bookingDateTime');
-    
-    if(modal) modal.style.display = 'block';
-    if(nameEl) nameEl.textContent = "Booking at " + restaurantName;
-    if(idInput) idInput.value = restaurantId;
-    
-    // Default to next hour
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
-    now.setMinutes(0);
-    const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-    if(dateInput) dateInput.value = localIso;
+window.placeQuickOrder = function(id) {
+    window.addToCart(id);
+    setTimeout(() => {
+        window.location.href = '/cart/';
+    }, 500);
+};
 
-    // Fetch and Populate Tables
-    fetchTablesForRestaurant(restaurantId);
-}
-
-async function fetchTablesForRestaurant(restaurantId) {
-    const tableSelect = document.getElementById('bookingTable');
-    if (!tableSelect) return;
-    
-    tableSelect.innerHTML = '<option value="">Loading tables...</option>';
-    
-    try {
-        // Fetch tables for this restaurant
-        const response = await fetch(`/api/tables/?restaurant=${restaurantId}`);
-        if (!response.ok) throw new Error('Failed to fetch tables');
-        
-        const tables = await response.json();
-        
-        // Filter available tables (though backend might return all, user can select any)
-        // Ideally we should filter by status or availability, but for now list all.
-        // Or filtering by 'Available' status if the model has it.
-        const availableTables = (tables.results || tables).filter(t => t.status === 'Available');
-        
-        if (availableTables.length === 0) {
-             tableSelect.innerHTML = '<option value="">Any Available Table</option>';
-             return;
-        }
-        
-        tableSelect.innerHTML = '<option value="">Select a Table (Optional)</option>';
-        availableTables.forEach(table => {
-            const option = document.createElement('option');
-            option.value = table.id;
-            option.textContent = `Table ${table.table_number} (${table.capacity} ppl)`;
-            tableSelect.appendChild(option);
-        });
-        
-    } catch (error) {
-        console.warn('Could not fetch tables:', error);
-        tableSelect.innerHTML = '<option value="">Any Available Table</option>';
+function updateCartBadge() {
+    const cart = JSON.parse(localStorage.getItem('deliciae_cart') || '[]');
+    const count = cart.reduce((acc, item) => acc + item.quantity, 0);
+    const badge = document.getElementById('cart-badge');
+    if(badge) {
+        badge.textContent = count;
+        if(count > 0) badge.classList.remove('hidden');
+        else badge.classList.add('hidden');
     }
 }
-
-window.closeBookingModal = function() {
-    const modal = document.getElementById('bookingModal');
-    if(modal) modal.style.display = 'none';
-}
-
-window.handleBookingSubmit = async function(event) {
-    event.preventDefault();
-    
-    const restaurantId = document.getElementById('bookingRestaurantId').value;
-    const dateTime = document.getElementById('bookingDateTime').value;
-    const people = document.getElementById('bookingPeople').value;
-    const table = document.getElementById('bookingTable').value; // Optional
-    
-    // Validate inputs
-    if (!restaurantId || !dateTime || !people) {
-        alert("Please fill in all required fields.");
-        return;
-    }
-
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerText;
-    submitBtn.innerText = 'Booking...';
-    submitBtn.disabled = true;
-    
-    try {
-        const response = await fetch('/api/bookings/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                restaurant: restaurantId,
-                date_time: dateTime,
-                people_count: people,
-                table: table || null
-            })
-        });
-        
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || 'Booking failed');
-        }
-        
-        const data = await response.json();
-        alert('Booking Confirmed! ✅\nWe look forward to serving you.');
-        closeBookingModal();
-        event.target.reset();
-        
-        // Refresh bookings if on orders/bookings view
-        // if(typeof fetchBookings === 'function') fetchBookings(); 
-        
-    } catch (error) {
-        console.error('Error creating booking:', error);
-        alert('Failed to book: ' + error.message);
-    } finally {
-        submitBtn.innerText = originalText;
-        submitBtn.disabled = false;
-    }
-}
-
-// Close modal when clicking outside (Unified)
-window.onclick = function(event) {
-    const reelModal = document.getElementById('uploadReelModal');
-    const bookingModal = document.getElementById('bookingModal');
-    const addFoodModal = document.getElementById('addFoodModal');
-    const profileModal = document.getElementById('restaurantProfileModal'); // If exists
-
-    if (event.target == reelModal) {
-        if(typeof closeUploadReelModal === 'function') closeUploadReelModal();
-    }
-    if (event.target == bookingModal) {
-        closeBookingModal();
-    }
-    if (event.target == addFoodModal) {
-        if(typeof closeAddFoodModal === 'function') closeAddFoodModal();
-    }
-    // Also handle profile modal if it's a click-outside closer
-    if (profileModal && event.target == profileModal) {
-        profileModal.style.display = 'none';
-        // Cleanup if needed
-    }
-}
-

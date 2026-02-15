@@ -6,7 +6,7 @@
 const LocationService = {
     // Configuration
     API_URL: '/api/nearby-restaurants/',
-    DEFAULT_RADIUS_KM: 200, // Increased radius to ensure matches if user is far (e.g. testing)
+    DEFAULT_RADIUS_KM: 20, // 20km max radius as requested
 
     init: function() {
         console.log("LocationService Initialized");
@@ -38,7 +38,9 @@ const LocationService = {
             (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                this.updateLocationStatus(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`);
+                // this.updateLocationStatus(`Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`); // Removed for production
+                this.updateLocationStatus('Found You!'); // User friendly message
+                setTimeout(() => this.updateLocationStatus(''), 2000); // Hide after 2s
                 this.fetchNearbyRestaurants(lat, lng);
             },
             (error) => {
@@ -107,39 +109,47 @@ const LocationService = {
             return;
         }
 
-        const html = restaurants.map(restaurant => {
+                const html = restaurants.map(restaurant => {
             // Default image fallback
             const imageUrl = restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
             
+            // Format time (remove seconds)
+            const openTime = (restaurant.opening_time || '10:00').slice(0, 5);
+            const closeTime = (restaurant.closing_time || '22:00').slice(0, 5);
+            
             return `
-                <div class="bg-[#1a1a1a] border border-white/10 rounded-[18px] overflow-hidden hover:border-[#FF6B35]/50 transition-all group">
-                    <div class="relative h-48 overflow-hidden">
-                        <img src="${imageUrl}" alt="${restaurant.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                        <div class="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10">
-                            <i class="fas fa-clock text-[#FF6B35] mr-1"></i> ${restaurant.opening_time || '10:00'} - ${restaurant.closing_time || '22:00'}
+                <div class="bg-[#1a1a1a] border border-white/10 rounded-[18px] overflow-hidden hover:border-[#FF6B35]/50 transition-all group shadow-lg hover:shadow-[#FF6B35]/10">
+                    <div class="relative h-48 overflow-hidden cursor-pointer" onclick="window.location.href='/restaurant/${restaurant.id}/'">
+                        <img src="${imageUrl}" alt="${restaurant.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
+                        
+                        <div class="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10 shadow-sm">
+                            <i class="fas fa-clock text-[#FF6B35] mr-1"></i> ${openTime} - ${closeTime}
                         </div>
-                        <div class="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10 flex items-center gap-1">
-                            <i class="fas fa-location-arrow text-[#FF6B35]"></i> ${restaurant.distance_km} km away
+                        <div class="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white border border-white/10 flex items-center gap-1 shadow-sm">
+                            <i class="fas fa-location-arrow text-[#FF6B35]"></i> ${restaurant.distance_km} km
                         </div>
                     </div>
                     
                     <div class="p-5">
                         <div class="flex justify-between items-start mb-2">
-                            <h3 class="text-xl font-bold text-white group-hover:text-[#FF6B35] transition-colors">${restaurant.name}</h3>
-                            <div class="flex items-center gap-1 bg-green-500/20 px-2 py-0.5 rounded-lg border border-green-500/30">
-                                <span class="text-green-400 font-bold text-sm">${restaurant.rating}</span>
-                                <i class="fas fa-star text-[10px] text-green-400"></i>
+                            <h3 class="text-xl font-bold text-white group-hover:text-[#FF6B35] transition-colors cursor-pointer" onclick="window.location.href='/restaurant/${restaurant.id}/'">${restaurant.name}</h3>
+                            <div class="flex items-center gap-1 bg-[#FF6B35]/10 px-2 py-0.5 rounded-lg border border-[#FF6B35]/20">
+                                <span class="text-[#FF6B35] font-bold text-sm">${restaurant.rating || 'New'}</span>
+                                <i class="fas fa-star text-[10px] text-[#FF6B35]"></i>
                             </div>
                         </div>
                         
-                        <p class="text-gray-400 text-sm mb-4 line-clamp-1">${restaurant.location}</p>
+                        <p class="text-gray-400 text-sm mb-4 line-clamp-1 flex items-center gap-1">
+                            <i class="fas fa-map-pin text-gray-600"></i> ${restaurant.location}
+                        </p>
                         
                         <div class="flex items-center justify-between pt-4 border-t border-white/10">
-                            <div class="text-xs text-gray-500 font-mono bg-white/5 px-2 py-1 rounded">
+                            <div class="text-xs text-gray-400 font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5 uppercase tracking-wide">
                                 ${restaurant.cuisine_type}
                             </div>
-                            <a href="/search/?q=${encodeURIComponent(restaurant.name)}" class="text-[#FF6B35] text-sm font-semibold hover:underline">
-                                View Menu <i class="fas fa-arrow-right ml-1"></i>
+                            <a href="/restaurant/${restaurant.id}/" class="text-white text-sm font-semibold hover:text-[#FF6B35] transition-colors flex items-center gap-2 group/btn">
+                                View Restaurant <i class="fas fa-arrow-right transform group-hover/btn:translate-x-1 transition-transform"></i>
                             </a>
                         </div>
                     </div>

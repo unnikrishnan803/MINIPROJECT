@@ -12,6 +12,24 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                    }
+                }
+            }
+        }
+    </script>
+    
     <!-- Stylesheets -->
     <link rel="stylesheet" href="{% static 'css/global.css' %}">
     <link rel="stylesheet" href="{% static 'css/components.css' %}">
@@ -122,7 +140,8 @@
         {% include 'components/sidebar.html' %}
         
         <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
+        <main class="flex-1 ml-0 md:ml-[240px] w-full md:w-[calc(100%-240px)] p-4 md:p-8 pb-24 md:pb-8">
+            {% include 'components/mobile_bottom_nav.html' %}
             <div class="main-container">
                 <div class="settings-container">
                 <h1 style="margin-bottom: var(--spacing-xl);">Settings</h1>
@@ -150,9 +169,9 @@
                     <div class="settings-item">
                         <div class="settings-item-info">
                             <h3>Location</h3>
-                            <p>{{ user.current_location|default:"Not set" }}</p>
+                            <p id="locationDisplay">{{ user.current_location|default:"Not set" }}</p>
                         </div>
-                        <button class="btn btn-secondary btn-sm">Update</button>
+                        <button id="updateLocationBtn" class="btn btn-secondary btn-sm" onclick="updateLocation()">Update</button>
                     </div>
                 </div>
                 
@@ -259,9 +278,90 @@
     </div>
     
     <!-- JavaScript -->
+    <script src="{% static 'js/script.js' %}?v=8"></script>
     <script>
         function logout() {
             window.location.href = "{% url 'account_logout' %}";
+        }
+
+        // Location Update Logic
+        async function updateLocation() {
+            const btn = document.getElementById('updateLocationBtn');
+            const originalText = btn.innerHTML;
+            const locationDisplay = document.getElementById('locationDisplay');
+            
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting...';
+            btn.disabled = true;
+            
+            try {
+                // Use script.js generic detector if available, or manual implementation
+                // script.js detects and sets window.userLat/Lng
+                
+                if (!navigator.geolocation) {
+                    throw new Error("Geolocation not supported");
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        
+                        // Reverse Geocode
+                        let cityName = "Unknown Location";
+                        try {
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                            const data = await res.json();
+                            cityName = data.address.city || data.address.town || data.address.village || data.display_name.split(',')[0];
+                        } catch (e) {
+                            console.warn("Reverse geo failed", e);
+                            cityName = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        }
+                        
+                        // Update UI
+                        locationDisplay.innerText = cityName;
+                        locationDisplay.innerHTML = `<span class="text-success"><i class="fas fa-check"></i> ${cityName}</span>`;
+                        
+                        // Save to Backend
+                        await saveLocationToBackend(cityName, lat, lng);
+                        
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        alert("✅ Location updated successfully!");
+                    },
+                    (error) => {
+                        throw error;
+                    }
+                );
+            } catch (error) {
+                console.error(error);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                alert("❌ Failed to detect location. Please enable GPS.");
+            }
+        }
+        
+        async function saveLocationToBackend(location, lat, lng) {
+            try {
+                const response = await fetch('/api/user/update/', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        current_location: location,
+                        latitude: lat,
+                        longitude: lng
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error("Backend update failed");
+                }
+            } catch (e) {
+                console.error("Save failed:", e);
+                // Don't alert here, rely on UI state or retry
+            }
         }
     </script>
 </body>

@@ -72,33 +72,62 @@
         {% include 'components/sidebar.html' %}
         
         <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)]">
+        <main class="flex-1 ml-0 md:ml-[240px] w-full md:w-[calc(100%-240px)] pb-24 md:pb-0">
+            {% include 'components/mobile_bottom_nav.html' %}
             <div class="max-w-6xl mx-auto px-6 py-12">
                 
-                <!-- Search Header -->
-                <div class="mb-10">
-                    <h1 class="text-4xl font-bold mb-2">
-                        Search Results for <span class="text-[#FF6B35] italic">"{{ query }}"</span>
+                <!-- Search Header & Input -->
+                <div class="mb-10 text-center">
+                    <h1 class="text-4xl md:text-5xl font-bold mb-6">
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B35] to-[#FFC107]">Order Food</span>
                     </h1>
-                    <p class="text-gray-400 text-lg">
-                        Found {{ restaurants|length }} Restaurants • {{ food_items|length }} Items
+                    
+                    <!-- Search Bar -->
+                    <div class="max-w-2xl mx-auto relative group z-20">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-[#FF6B35] to-[#FFC107] rounded-2xl opacity-20 group-hover:opacity-40 blur transition duration-500"></div>
+                        <form action="{% url 'search' %}" method="GET" class="relative flex items-center bg-[#151515] border border-white/10 rounded-2xl p-2 shadow-2xl">
+                            <i class="fas fa-search text-gray-400 text-xl ml-4"></i>
+                            <input type="text" 
+                                   name="q" 
+                                   value="{{ query|default:'' }}"
+                                   placeholder="Search for restaurants, dishes, or cuisines..." 
+                                   class="w-full bg-transparent border-none text-white placeholder-gray-500 px-4 py-3 focus:outline-none text-lg"
+                                   autocomplete="off">
+                            <button type="submit" class="bg-[#FF6B35] hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-lg shadow-orange-500/20">
+                                Search
+                            </button>
+                        </form>
+                    </div>
+
+                    {% if query %}
+                    <p class="text-gray-400 mt-6 animate-fade-up">
+                        Showing results for <span class="text-[#FF6B35] italic">"{{ query }}"</span> • {{ restaurants|length }} Restaurants • {{ food_items|length }} Items
                     </p>
+                    {% else %}
+                    <p class="text-gray-400 mt-6 animate-fade-up">
+                        Explore top rated restaurants and trending dishes near you.
+                    </p>
+                    {% endif %}
                 </div>
 
                 <!-- Filters -->
                 <div class="flex gap-4 mb-10 overflow-x-auto pb-2">
-                    <button class="bg-[#FF6B35] text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-orange-500/20 transition hover:scale-105">
+                    <a href="?q={{ query|urlencode }}" 
+                       class="px-6 py-2.5 rounded-xl font-medium transition hover:scale-105 {% if not filter_type or filter_type == 'all' and not sort_by %}bg-[#FF6B35] text-white shadow-lg shadow-orange-500/20{% else %}bg-[#1a1a1a] border border-white/10 text-gray-300 hover:bg-[#252525] hover:text-white{% endif %}">
                         All
-                    </button>
-                    <button class="bg-[#1a1a1a] border border-white/10 text-gray-300 px-6 py-2.5 rounded-xl font-medium hover:bg-[#252525] hover:text-white transition">
+                    </a>
+                    <a href="?q={{ query|urlencode }}&type=restaurants" 
+                       class="px-6 py-2.5 rounded-xl font-medium transition hover:scale-105 {% if filter_type == 'restaurants' %}bg-[#FF6B35] text-white shadow-lg shadow-orange-500/20{% else %}bg-[#1a1a1a] border border-white/10 text-gray-300 hover:bg-[#252525] hover:text-white{% endif %}">
                         Restaurants
-                    </button>
-                    <button class="bg-[#1a1a1a] border border-white/10 text-gray-300 px-6 py-2.5 rounded-xl font-medium hover:bg-[#252525] hover:text-white transition">
+                    </a>
+                    <a href="?q={{ query|urlencode }}&type=dishes" 
+                       class="px-6 py-2.5 rounded-xl font-medium transition hover:scale-105 {% if filter_type == 'dishes' %}bg-[#FF6B35] text-white shadow-lg shadow-orange-500/20{% else %}bg-[#1a1a1a] border border-white/10 text-gray-300 hover:bg-[#252525] hover:text-white{% endif %}">
                         Dishes
-                    </button>
-                    <button class="bg-[#1a1a1a] border border-white/10 text-gray-300 px-6 py-2.5 rounded-xl font-medium hover:bg-[#252525] hover:text-white transition">
+                    </a>
+                    <a href="?q={{ query|urlencode }}&sort=top_rated" 
+                       class="px-6 py-2.5 rounded-xl font-medium transition hover:scale-105 {% if sort_by == 'top_rated' %}bg-[#FF6B35] text-white shadow-lg shadow-orange-500/20{% else %}bg-[#1a1a1a] border border-white/10 text-gray-300 hover:bg-[#252525] hover:text-white{% endif %}">
                         Top Rated
-                    </button>
+                    </a>
                 </div>
 
                 <!-- Restaurants Grid -->
@@ -197,8 +226,11 @@
                         {% for item in food_items %}
                         <div class="bg-[#151515] border border-white/5 rounded-2xl overflow-hidden hover:border-gray-600 transition group relative animate-fade-up" style="animation-delay: {{ forloop.counter }}00ms;">
                             <div class="h-48 overflow-hidden relative">
-                                <img src="{{ item.image_url|default:'https://source.unsplash.com/random/300x300/?food' }}" alt="{{ item.name }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                                <button class="absolute bottom-3 right-3 bg-white text-black w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-[#FF6B35] hover:text-white transition">
+                                <img src="{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url|default:'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=60' }}{% endif %}" 
+                                     alt="{{ item.name }}" 
+                                     class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                     onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=60';">
+                                <button class="absolute bottom-3 right-3 bg-white text-black w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-[#FF6B35] hover:text-white transition" onclick="addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }}, {{ item.restaurant.id }}, '{{ item.restaurant.name|escapejs }}', '{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url|escapejs }}{% endif %}')">
                                     <i class="fas fa-plus"></i>
                                 </button>
                                 {% if item.price_discount %}
@@ -275,7 +307,7 @@
     </div>
     
     <!-- Scripts (Versioned to force reload) -->
-    <script src="{% static 'js/location.js' %}?v=2.0"></script>
+    <script src="{% static 'js/location.js' %}?v=2.3"></script>
     <script src="{% static 'js/script.js' %}?v=2.1"></script>
 </body>
 </html>

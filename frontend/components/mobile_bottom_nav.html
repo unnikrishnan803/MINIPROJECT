@@ -1,0 +1,39 @@
+<nav class="fixed bottom-0 left-0 w-full bg-black/80 backdrop-blur-md border-t border-white/10 flex justify-between items-center px-6 py-3 z-50 md:hidden pb-safe">
+    <a href="{% url 'home' %}" class="flex flex-col items-center gap-1 text-gray-400 hover:text-[#FF6B35] transition {% if request.resolver_match.url_name == 'home' %}text-[#FF6B35]{% endif %}">
+        <i class="fas fa-home text-xl"></i>
+        <span class="text-[10px] font-medium">Home</span>
+    </a>
+    
+    <a href="{% url 'search' %}" class="flex flex-col items-center gap-1 text-gray-400 hover:text-[#FF6B35] transition {% if request.resolver_match.url_name == 'search' %}text-[#FF6B35]{% endif %}">
+        <i class="fas fa-search text-xl"></i>
+        <span class="text-[10px] font-medium">Search</span>
+    </a>
+    
+    <div class="relative -top-5">
+        <a href="{% url 'reels' %}" class="flex items-center justify-center w-14 h-14 bg-gradient-to-r from-[#FF6B35] to-[#FFC107] rounded-full shadow-lg shadow-orange-500/30 text-white transform transition hover:scale-110">
+            <i class="fas fa-play text-xl"></i>
+        </a>
+    </div>
+    
+    <a href="{% url 'cart' %}" class="flex flex-col items-center gap-1 text-gray-400 hover:text-[#FF6B35] transition {% if request.resolver_match.url_name == 'cart' %}text-[#FF6B35]{% endif %}">
+        <div class="relative">
+            <i class="fas fa-shopping-cart text-xl"></i>
+            {% if request.user.cart_count > 0 %}
+            <span class="absolute -top-1 -right-2 bg-[#FF6B35] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">{{ request.user.cart_count }}</span>
+            {% endif %}
+        </div>
+        <span class="text-[10px] font-medium">Cart</span>
+    </a>
+    
+    <a href="{% url 'profile' %}" class="flex flex-col items-center gap-1 text-gray-400 hover:text-[#FF6B35] transition {% if request.resolver_match.url_name == 'profile' %}text-[#FF6B35]{% endif %}">
+        <img src="{{ user.socialaccount_set.first.get_avatar_url|default:'https://ui-avatars.com/api/?name='|add:user.username }}" alt="User" class="w-6 h-6 rounded-full border border-gray-600">
+        <span class="text-[10px] font-medium">Profile</span>
+    </a>
+</nav>
+
+<style>
+    /* Safe area padding for iPhones with home indicator */
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 20px);
+    }
+</style>

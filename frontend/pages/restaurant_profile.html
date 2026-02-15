@@ -50,7 +50,8 @@
         {% include 'components/sidebar.html' %}
 
         <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)]">
+        <main class="flex-1 ml-0 md:ml-[240px] w-full md:w-[calc(100%-240px)] pb-24 md:pb-0">
+            {% include 'components/mobile_bottom_nav.html' %}
             
             <!-- Cover Image Header -->
             <div class="relative h-64 w-full">
@@ -176,7 +177,7 @@
                         {% for item in menu %}
                         <div class="bg-[#151515] p-4 rounded-xl flex gap-4 hover:bg-[#1a1a1a] transition-colors border border-white/5 group">
                             <div class="w-20 h-20 rounded-lg overflow-hidden shrink-0">
-                                <img src="{{ item.image_url|default:'https://placehold.co/80' }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                <img src="{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url|default:'https://placehold.co/80' }}{% endif %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex justify-between items-start mb-1">
@@ -190,7 +191,7 @@
                                     {% else %}
                                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">Sold Out</span>
                                     {% endif %}
-                                    <button class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-[#FF6B35] hover:text-white transition-colors shadow-lg transform active:scale-95" onclick="addToCart({{ item.id }})">
+                                    <button class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-[#FF6B35] hover:text-white transition-colors shadow-lg transform active:scale-95" onclick="addToCart({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }}, {{ restaurant.id }}, '{{ restaurant.name|escapejs }}', '{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url|escapejs }}{% endif %}')">
                                         <i class="fas fa-plus text-xs"></i>
                                     </button>
                                 </div>
@@ -228,12 +229,75 @@
         </div>
     </div>
     
+    <!-- Cart Floating Action Button -->
+    <button id="cartFab" onclick="openCartModal()" class="fixed bottom-8 right-8 bg-[#FF6B35] text-white p-4 rounded-full shadow-2xl hover:bg-[#e05a2b] transition-all transform hover:scale-110 z-40 hidden flex items-center justify-center group animate-bounce-in">
+        <i class="fas fa-shopping-basket text-xl"></i>
+        <div id="cartCount" class="absolute -top-2 -right-2 bg-white text-[#FF6B35] text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#151515]">0</div>
+    </button>
+
+    <!-- Cart Modal -->
+    <div id="cartModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex justify-end transition-opacity duration-300">
+        <div class="bg-[#151515] w-full max-w-md h-full shadow-2xl border-l border-white/10 flex flex-col transform translate-x-full transition-transform duration-300" id="cartModalContent">
+            
+            <!-- Header -->
+            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-[#1a1a1a]">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fas fa-shopping-basket text-[#FF6B35]"></i> Your Cart
+                </h2>
+                <button onclick="closeCartModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Cart Items -->
+            <div id="cartItems" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                <!-- Items injected by JS -->
+                <div class="text-center text-gray-500 mt-10">
+                    <i class="fas fa-shopping-basket text-4xl mb-4 opacity-20"></i>
+                    <p>Your cart is empty</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-6 border-t border-white/10 bg-[#1a1a1a]">
+                
+                <!-- Order Type Selection -->
+                <div class="mb-4">
+                    <label class="text-xs text-gray-500 uppercase tracking-widest font-semibold block mb-2">Order Type</label>
+                    <div class="flex gap-2 bg-black/40 p-1 rounded-lg">
+                        <button onclick="setOrderType('dining')" id="btn-dining" class="flex-1 py-2 rounded-md text-sm font-medium transition-all bg-[#FF6B35] text-white shadow-lg">
+                            <i class="fas fa-utensils mr-1"></i> Dining
+                        </button>
+                        <button onclick="setOrderType('delivery')" id="btn-delivery" class="flex-1 py-2 rounded-md text-sm font-medium transition-all text-gray-400 hover:text-white">
+                            <i class="fas fa-motorcycle mr-1"></i> Delivery
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Delivery Address Input -->
+                <div id="delivery-address-section" class="mb-4 hidden">
+                    <label class="text-xs text-gray-500 uppercase tracking-widest font-semibold block mb-2">Delivery Address</label>
+                    <textarea id="delivery-address" rows="2" class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-[#FF6B35] transition-colors" placeholder="Enter your full address..."></textarea>
+                </div>
+
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-gray-400">Total</span>
+                    <span class="text-2xl font-bold text-white" id="cartTotal">₹0.00</span>
+                </div>
+                <button onclick="checkout()" class="w-full bg-[#FF6B35] hover:bg-[#e05a2b] text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-orange-500/20 transition-all flex items-center justify-center gap-2">
+                    <span>Place Order</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Booking Modal Placeholders -->
     <div id="bookingModal"></div>
 
 
     <!-- Scripts -->
-    <script src="{% static 'js/script.js' %}?v=2.2"></script>
+    <script src="{% static 'js/script.js' %}?v=2.6"></script>
     <script>
         function switchTab(tabName) {
             // Update Buttons

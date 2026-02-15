@@ -9,259 +9,596 @@
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#FF6B35',
-                        secondary: '#FFC107',
-                        dark: '#0f0f0f',
-                        glass: 'rgba(255, 255, 255, 0.05)',
-                    },
-                    fontFamily: {
-                        outfit: ['Outfit', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="{% static 'css/global.css' %}">
-    <link rel="stylesheet" href="{% static 'css/components.css' %}">
-    <!-- <link rel="stylesheet" href="{% static 'css/dashboard.css' %}"> -->
-    <style>body { background: #0f0f0f; color: white; }</style>
-    
     <style>
-        /* Body padding handled by dashboard layout */
-        
-        .reels-container {
-            max-width: 500px;
-            margin: 0 auto;
-            padding: var(--spacing-md) 0;
-        }
-        
-        .reel-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            margin-bottom: var(--spacing-lg);
-        }
-        
-        .reel-video-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 9/16;
+        /* Immersive Reels Layout */
+        body {
+            margin: 0;
+            padding: 0;
             background: #000;
+            color: white;
+            overflow: hidden; /* Main scroll handled by reels-container */
+        }
+        
+        .reels-scroll-container {
+            height: 100vh;
+            width: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        /* Hide scrollbar */
+        .reels-scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+        .reels-scroll-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .reel-section {
+            height: 100vh;
+            width: 100%;
+            scroll-snap-align: start;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        /* Ambient Background */
+        .reel-ambient-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: blur(20px) brightness(0.4);
+            transform: scale(1.1); /* Prevent blur edges */
+            z-index: 0;
+            opacity: 0.6;
+        }
+        
+        .reel-video-wrapper {
+            width: 100%;
+            max-width: 480px; /* Optimal mobile width */
+            height: 100%;
+            position: relative;
+            background: #000;
+            z-index: 1; /* Above ambient */
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); /* Lift off background */
         }
         
         .reel-video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            cursor: pointer;
         }
         
-        .reel-overlay {
+        /* Overlays */
+        .reel-overlay-gradient {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: var(--spacing-lg);
-            background: linear-gradient(transparent, rgba(0,0,0,0.8));
-            color: white;
+            left: 0; right: 0; bottom: 0;
+            height: 50%;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            pointer-events: none;
         }
         
-        .reel-restaurant {
+        .reel-content {
+            position: absolute;
+            bottom: 20px;
+            left: 15px;
+            right: 80px; /* Space for right-side actions */
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .reel-info-safe {
+            pointer-events: auto;
+        }
+        
+        .reel-restaurant-badge {
             display: flex;
             align-items: center;
-            gap: var(--spacing-sm);
-            margin-bottom: var(--spacing-sm);
+            gap: 10px;
+            margin-bottom: 12px;
         }
         
-        .reel-restaurant-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius-full);
+        .reel-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-primary, #FF6B35);
         }
         
-        .reel-restaurant-name {
-            font-weight: 600;
+        .reel-username {
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         
         .reel-caption {
-            margin-bottom: var(--spacing-sm);
+            font-size: 1rem;
+            line-height: 1.4;
+            margin-bottom: 10px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* Truncate long captions */
+            line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
         }
         
-        .reel-actions {
+        .reel-actions-rail {
+            position: absolute;
+            bottom: 40px;
+            right: 10px;
             display: flex;
-            gap: var(--spacing-lg);
+            flex-direction: column;
+            gap: 25px;
+            z-index: 20;
+            align-items: center;
         }
         
-        .reel-action-btn {
-            background: none;
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: transparent;
             border: none;
             color: white;
-            font-size: 1.5rem;
             cursor: pointer;
-            transition: transform var(--transition-fast);
+            transition: transform 0.2s;
         }
         
-        .reel-action-btn:hover {
-            transform: scale(1.2);
+        .action-btn:active { transform: scale(0.9); }
+        
+        .action-icon-circle {
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(5px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
         }
         
-        .reel-action-btn.liked {
-            color: var(--error);
+        .action-btn.liked .action-icon-circle {
+            background: rgba(255, 107, 53, 0.2);
+            color: #FF6B35;
         }
         
-        @media (max-width: 600px) {
-            .reels-container {
-                padding: 0;
-            }
-            
-            .reel-card {
-                border-radius: 0;
-                margin-bottom: 0;
-            }
+        .action-btn.liked .fa-heart {
+            font-weight: 900;
+        }
+        
+        .action-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-shadow: 0 1px 2px black;
+        }
+        
+        /* Order Button Hook */
+        .order-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 107, 53, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 8px;
+            backdrop-filter: blur(4px);
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+            pointer-events: auto;
+        }
+
+        /* Navigation Overlay like TikTok back button */
+        .nav-overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+        }
+        
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+        }
+
+        /* Loading & Error States */
+        .loader-screen, .error-screen, .empty-screen {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .heart-animation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 6rem;
+            color: rgba(255, 255, 255, 0.9);
+            z-index: 50;
+            pointer-events: none;
+            animation: none;
+        }
+        
+        @keyframes pumpHeart {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2) rotate(0deg); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(10deg); opacity: 0; }
         }
     </style>
 </head>
 <body>
     
-    <div class="flex min-h-screen">
-        <!-- Sidebar -->
-        {% include 'components/sidebar.html' %}
-        
-        <!-- Main Content -->
-        <main class="flex-1 ml-[240px] w-[calc(100%-240px)] p-8">
-            <div class="main-container">
-                <!-- Reels Container -->
-                <div class="reels-container" id="reelsContainer">
-                <!-- Loading -->
-                <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary);">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: var(--spacing-md);"></i>
-                    <p>Loading reels...</p>
-                </div>
-                </div>
-            </div> <!-- End Main Container -->
-        </main>
+    <!-- Navigation Back Button -->
+    <div class="nav-overlay">
+        <a href="{% url 'home' %}" class="back-btn">
+            <i class="fas fa-arrow-left"></i>
+        </a>
     </div>
-    
-    <!-- JavaScript -->
+
+    <!-- Main Scroll Container -->
+    <div class="reels-scroll-container" id="reelsContainer">
+        <!-- Initial Loading State -->
+        <div class="loader-screen">
+            <i class="fas fa-compact-disc fa-spin" style="font-size: 3rem; color: #FF6B35; margin-bottom: 20px;"></i>
+            <h3>Curating Delicious Moments...</h3>
+        </div>
+    </div>
+
+    <!-- JavaScript logic -->
     <script>
-        // Load reels
+        // Store globally to handle observers
+        let loadedReels = [];
+
         async function loadReels() {
             const container = document.getElementById('reelsContainer');
             
             try {
                 const response = await fetch('/api/reels/');
-                const reels = await response.json();
+                const data = await response.json();
+                const reels = data.results || data; // Handle pagination
                 
-                if (reels.length === 0) {
+                // Clear loader
+                container.innerHTML = '';
+
+                if (!reels || reels.length === 0) {
                     container.innerHTML = `
-                        <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary);">
-                            <i class="fas fa-video" style="font-size: 4rem; margin-bottom: var(--spacing-md); opacity: 0.3;"></i>
-                            <h3>No reels yet</h3>
-                            <p>Check back later for exciting food content!</p>
+                        <div class="empty-screen">
+                            <i class="fas fa-film" style="font-size: 4rem; margin-bottom: 20px; opacity: 0.5;"></i>
+                            <h2>No Reels Yet</h2>
+                            <p style="opacity: 0.7;">Be the first restaurant to post!</p>
+                            <a href="{% url 'home' %}" class="order-pill" style="margin-top: 20px; text-decoration: none;">Go Home</a>
                         </div>
                     `;
                     return;
                 }
                 
-                container.innerHTML = reels.map(reel => createReelCard(reel)).join('');
+                loadedReels = reels;
+                reels.forEach(reel => {
+                    const reelEl = createReelElement(reel);
+                    container.appendChild(reelEl);
+                });
+
+                // Attach Observers
+                setupIntersectionObserver();
+
             } catch (error) {
                 console.error('Error loading reels:', error);
                 container.innerHTML = `
-                    <div style="text-align: center; padding: var(--spacing-2xl); color: var(--text-secondary);">
-                        <i class="fas fa-exclamation-circle" style="font-size: 4rem; margin-bottom: var(--spacing-md); opacity: 0.3;"></i>
-                        <h3>Error loading reels</h3>
-                        <p>Please try again later</p>
+                    <div class="error-screen">
+                        <i class="fas fa-wifi" style="font-size: 4rem; margin-bottom: 20px; color: #ff4757;"></i>
+                        <h2>Connection Error</h2>
+                        <button onclick="loadReels()" class="order-pill" style="margin-top: 20px;">Try Again</button>
                     </div>
                 `;
             }
         }
         
-        // Create reel card
-        function createReelCard(reel) {
-            return `
-                <div class="reel-card">
-                    <div class="reel-video-container">
-                        <video class="reel-video" controls loop>
-                            <source src="${reel.video_url}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>
-                        
-                        <div class="reel-overlay">
-                            <div class="reel-restaurant">
-                                <img src="${reel.restaurant_avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(reel.restaurant_name)}" 
-                                     alt="${reel.restaurant_name}" 
-                                     class="reel-restaurant-avatar">
-                                <div>
-                                    <div class="reel-restaurant-name">${reel.restaurant_name || 'Restaurant'}</div>
-                                    <div style="font-size: 0.875rem; opacity: 0.8;">${new Date(reel.created_at).toLocaleDateString()}</div>
-                                </div>
+        function createReelElement(reel) {
+            const section = document.createElement('div');
+            section.className = 'reel-section';
+            
+            // Format data
+            const avatar = reel.restaurant_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(reel.restaurant_name)}&background=random`;
+            const date = new Date(reel.created_at).toLocaleDateString();
+            const likedClass = reel.is_liked ? 'liked' : '';
+            
+            section.innerHTML = `
+                <!-- Ambient Background Video -->
+                <video class="reel-ambient-bg" muted loop playsinline>
+                    <source src="${reel.video_url}" type="video/mp4">
+                </video>
+
+                <div class="reel-video-wrapper">
+                    <!-- Main Video -->
+                    <video class="reel-video" loop playsinline onclick="togglePlay(this)">
+                        <source src="${reel.video_url}" type="video/mp4">
+                    </video>
+                    
+                    <!-- Double Tap Heart Animation -->
+                    <i class="fas fa-heart heart-animation"></i>
+
+                    <!-- Gradient Overlay -->
+                    <div class="reel-overlay-gradient"></div>
+
+                    <!-- Content (Bottom Left) -->
+                    <div class="reel-content">
+                        <div class="reel-info-safe">
+                            <div class="reel-restaurant-badge">
+                                <img src="${avatar}" class="reel-avatar" alt="${reel.restaurant_name}">
+                                <span class="reel-username">@${reel.restaurant_name}</span>
+                                <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 12px; padding: 2px 8px; font-size: 0.7rem; margin-left: 8px;">Follow</button>
                             </div>
                             
-                            ${reel.caption ? `<div class="reel-caption">${reel.caption}</div>` : ''}
+                            <p class="reel-caption">${reel.caption || ''}</p>
                             
-                            <div class="reel-actions">
-                                <button class="reel-action-btn ${reel.is_liked ? 'liked' : ''}" onclick="toggleReelLike(${reel.id}, this)">
-                                    <i class="fas fa-heart"></i>
-                                    <span style="font-size: 0.875rem; margin-left: 0.25rem;">${reel.likes_count || 0}</span>
+                            ${reel.food_item_id ? `
+                                <button class="order-pill" onclick="quickOrder(${reel.food_item_id}, '${reel.food_item_name.replace(/'/g, "\\'")}', ${reel.food_item_price}, ${reel.restaurant}, '${reel.restaurant_name.replace(/'/g, "\\'")}', '${reel.food_item_image || ''}')">
+                                    <i class="fas fa-utensils"></i> Order ${reel.food_item_name}
                                 </button>
-                                <button class="reel-action-btn" onclick="openComments(${reel.id})">
-                                    <i class="fas fa-comment"></i>
-                                    <span style="font-size: 0.875rem; margin-left: 0.25rem;">${reel.comments_count || 0}</span>
-                                </button>
-                                <button class="reel-action-btn" onclick="shareReel(${reel.id})">
-                                    <i class="fas fa-share"></i>
-                                </button>
-                            </div>
+                            ` : ''}
                         </div>
+                    </div>
+
+                    <!-- Actions (Right Rail) -->
+                    <div class="reel-actions-rail">
+                        <button class="action-btn ${likedClass}" onclick="toggleLike(${reel.id}, this)">
+                            <div class="action-icon-circle">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <span class="action-label likes-count">${reel.likes_count}</span>
+                        </button>
+                        
+                        <button class="action-btn" onclick="alert('Comments coming soon!')">
+                            <div class="action-icon-circle">
+                                <i class="fas fa-comment-dots"></i>
+                            </div>
+                            <span class="action-label">${reel.comments_count}</span>
+                        </button>
+                        
+                        <button class="action-btn" onclick="shareReel(${reel.id})">
+                            <div class="action-icon-circle">
+                                <i class="fas fa-share"></i>
+                            </div>
+                            <span class="action-label">Share</span>
+                        </button>
+                        
+                        <button class="action-btn">
+                            <div class="action-icon-circle" style="animation: spin 4s linear infinite;">
+                                <i class="fas fa-compact-disc"></i>
+                            </div>
+                        </button>
                     </div>
                 </div>
             `;
-        }
-        
-        // Toggle like
-        async function toggleReelLike(id, button) {
-            try {
-                const response = await fetch(`/api/reels/${id}/like/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
+            
+
+            // Double Tap Logic
+            const video = section.querySelector('.reel-video');
+            let lastTap = 0;
+            video.addEventListener('click', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                
+                if (tapLength < 300 && tapLength > 0) {
+                    // Double Tap
+                    const heart = section.querySelector('.heart-animation');
+                    heart.style.animation = 'pumpHeart 0.8s ease-out forwards';
+                    
+                    // Trigger like if not liked
+                    const likeBtn = section.querySelector('.action-btn'); // First action btn is like
+                    if (!likeBtn.classList.contains('liked')) {
+                        toggleLike(reel.id, likeBtn);
                     }
-                });
-                
-                const data = await response.json();
-                
-                button.classList.toggle('liked');
-                button.querySelector('span').textContent = data.likes_count;
-            } catch (error) {
-                console.error('Error toggling like:', error);
+                    
+                    setTimeout(() => { heart.style.animation = 'none'; }, 800);
+                    e.preventDefault(); // Prevent pause on double tap
+                } else {
+                    // Single Tap handled by onclick
+                }
+                lastTap = currentTime;
+            });
+
+            return section;
+        }
+
+        // --- Interaction Logic ---
+
+        function togglePlay(video) {
+            // Find ambient video sibling (it's outside the wrapper, so go up to section then find ambient)
+            const section = video.closest('.reel-section');
+            const ambient = section.querySelector('.reel-ambient-bg');
+            
+            if (video.paused) {
+                video.play();
+                if(ambient) ambient.play();
+            } else {
+                video.pause();
+                if(ambient) ambient.pause();
             }
         }
         
-        // Open comments
-        function openComments(id) {
-            console.log('Open comments:', id);
-            // Will implement
+        // ... (toggleLike, shareReel, quickOrder remain same) ...
+
+        // --- Intersection Observer for Auto-Play ---
+        function setupIntersectionObserver() {
+            const options = {
+                root: document.getElementById('reelsContainer'),
+                threshold: 0.6
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const section = entry.target;
+                    const video = section.querySelector('.reel-video');
+                    const ambient = section.querySelector('.reel-ambient-bg');
+                    
+                    if (entry.isIntersecting) {
+                        video.play().catch(e => console.log('Autoplay blocked:', e));
+                        if(ambient) ambient.play().catch(e => {});
+                    } else {
+                        video.pause();
+                        video.currentTime = 0; // Restart
+                        if(ambient) {
+                            ambient.pause();
+                            ambient.currentTime = 0;
+                        }
+                    }
+                });
+            }, options);
+
+            document.querySelectorAll('.reel-section').forEach(section => {
+                observer.observe(section);
+            });
         }
-        
-        // Share reel
+
+        async function toggleLike(id, btn) {
+            // Optimistic UI update
+            const isLiked = btn.classList.contains('liked');
+            const countSpan = btn.querySelector('.likes-count');
+            let count = parseInt(countSpan.textContent) || 0;
+            
+            if (isLiked) {
+                btn.classList.remove('liked');
+                countSpan.textContent = Math.max(0, count - 1);
+            } else {
+                btn.classList.add('liked');
+                countSpan.textContent = count + 1;
+            }
+            
+            try {
+                // Actual API call
+                await fetch(`/api/reels/${id}/like/`, {
+                    method: 'POST',
+                    headers: { 
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json' 
+                    }
+                });
+            } catch (e) {
+                console.error('Like failed', e);
+                // Revert on failure
+                if (isLiked) {
+                    btn.classList.add('liked');
+                    countSpan.textContent = count;
+                } else {
+                    btn.classList.remove('liked');
+                    countSpan.textContent = count;
+                }
+            }
+        }
+
         function shareReel(id) {
-            console.log('Share reel:', id);
-            // Will implement
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Check out this dish on Deliciae!',
+                    url: window.location.href
+                });
+            } else {
+                alert('Copied link to clipboard!');
+            }
+        }
+
+        function quickOrder(itemId, itemName, itemPrice, restaurantId, restaurantName, itemImage) {
+            // Logic to add to cart
+             if(confirm(`Add ${itemName} to cart for ₹${itemPrice}?`)) {
+                const cart = JSON.parse(localStorage.getItem('deliciae_cart') || '[]');
+                const existingIndex = cart.findIndex(i => i.id === itemId);
+
+                if (existingIndex > -1) {
+                    cart[existingIndex].quantity += 1;
+                } else {
+                    cart.push({
+                        id: itemId,
+                        name: itemName,
+                        price: parseFloat(itemPrice),
+                        quantity: 1,
+                        image: itemImage || 'https://via.placeholder.com/150',
+                        restaurant: restaurantName
+                    });
+                }
+
+                localStorage.setItem('deliciae_cart', JSON.stringify(cart));
+                
+                // Show toast
+                const toast = document.createElement('div');
+                toast.style.position = 'fixed';
+                toast.style.top = '20px';
+                toast.style.left = '50%';
+                toast.style.transform = 'translateX(-50%)';
+                toast.style.background = '#4CAF50';
+                toast.style.color = 'white';
+                toast.style.padding = '12px 24px';
+                toast.style.borderRadius = '30px';
+                toast.style.zIndex = '1000';
+                toast.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                toast.innerHTML = `<i class="fas fa-check-circle"></i> Added to Cart!`;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => toast.remove(), 2000);
+            }
+        }
+
+        // --- Intersection Observer for Auto-Play ---
+        function setupIntersectionObserver() {
+            const options = {
+                root: document.getElementById('reelsContainer'),
+                threshold: 0.6
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const section = entry.target;
+                    const video = section.querySelector('.reel-video');
+                    const ambient = section.querySelector('.reel-ambient-bg');
+                    
+                    if (entry.isIntersecting) {
+                        video.play().catch(e => console.log('Autoplay blocked:', e));
+                        if(ambient) ambient.play().catch(e => {});
+                    } else {
+                        video.pause();
+                        video.currentTime = 0; // Restart
+                        if(ambient) {
+                            ambient.pause();
+                            ambient.currentTime = 0;
+                        }
+                    }
+                });
+            }, options);
+
+            document.querySelectorAll('.reel-section').forEach(section => {
+                observer.observe(section);
+            });
         }
         
-        // Get CSRF token
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -276,9 +613,10 @@
             }
             return cookieValue;
         }
-        
-        // Load on page load
+
+        // Initialize
         document.addEventListener('DOMContentLoaded', loadReels);
+
     </script>
 </body>
 </html>
