@@ -9,6 +9,7 @@ from core.views import (
     ReelViewSet, FollowViewSet,
     OfferViewSet, NotificationViewSet, RestaurantCrowdViewSet, update_crowd_status,
     NearbyRestaurantsAPIView, RestaurantProfileUpdateView, UserUpdateAPIView,
+    RefreshTrendView, DemandPredictionView
 )
 from .ai_views import RecommendationView, SmartHighlightsView, SellingOutView
 
@@ -41,4 +42,6 @@ urlpatterns = [
     path('nearby-restaurants/', NearbyRestaurantsAPIView.as_view(), name='nearby-restaurants'),
     path('restaurant/profile/', RestaurantProfileUpdateView.as_view(), name='restaurant-profile-update'),
     path('user/update/', UserUpdateAPIView.as_view(), name='user-update'),
+    path('trends/refresh/', RefreshTrendView.as_view(), name='refresh-trends'),
+    path('predict/demand/', DemandPredictionView.as_view(), name='predict-demand'),
 ]

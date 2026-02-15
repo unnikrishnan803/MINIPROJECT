@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const html = restaurants.map(restaurant => {
             // Default image fallback
-            const imageUrl = restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
+            const imageUrl = restaurant.image || restaurant.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
             
             // Format time (remove seconds)
             const openTime = (restaurant.opening_time || '10:00').slice(0, 5);
@@ -810,43 +810,34 @@ window.openRestaurantProfile = function(id) {
 // --- TAB SWITCHING (Refined) ---
 
 // --- TAB SWITCHING (Refined) ---
-window.switchProfileTab = function(tab, btn) {
-    const content = document.getElementById('profileTabContent');
-    const tabs = document.querySelectorAll('#profileTabsHeader button');
-    
-    // Update Tab Styles
-    tabs.forEach(t => {
-        t.className = 'flex-1 pb-4 text-gray-500 font-medium hover:text-white transition-colors focus:outline-none border-b-2 border-transparent';
-    });
-    btn.className = 'flex-1 pb-4 text-[#FF6B35] font-medium border-b-2 border-[#FF6B35] transition-colors focus:outline-none';
-    
-    // Animate Content Out/In
-    content.style.opacity = '0';
-    content.style.transform = 'translateY(10px)';
-    
-    setTimeout(() => {
-        if(tab === 'posts') {
-            renderProfilePosts(window.currentProfileData.posts, content);
-        } else if (tab === 'menu') {
-            renderProfileMenu(window.currentProfileData.menu, content);
-        } else if (tab === 'reviews') {
-             content.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-12 text-gray-500">
-                     <div class="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center text-2xl mb-4 text-gray-400">
-                        <i class="far fa-comment-alt"></i>
-                    </div>
-                    <p class="text-lg font-medium">No reviews yet</p>
-                    <p class="text-sm opacity-60">Be the first to review this place!</p>
-                </div>
-            `;
+// --- TAB SWITCHING (Fixed) ---
+window.switchTab = function(tabName) {
+    // 1. Update Buttons
+    const buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(btn => {
+        if(btn.dataset.tab === tabName) {
+            btn.classList.remove('text-gray-500', 'border-transparent', 'hover:text-white');
+            btn.classList.add('text-[#FF6B35]', 'border-[#FF6B35]');
+        } else {
+            btn.classList.add('text-gray-500', 'border-transparent', 'hover:text-white');
+            btn.classList.remove('text-[#FF6B35]', 'border-[#FF6B35]');
         }
-        
-        // Animate In
-        content.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        content.style.opacity = '1';
-        content.style.transform = 'translateY(0)';
-    }, 200);
-}
+    });
+
+    // 2. Update Content
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(content => {
+        if(content.id === `tab-${tabName}`) {
+            content.classList.remove('hidden');
+            // Re-trigger animation
+            content.classList.remove('animate-fade-up');
+            void content.offsetWidth; // trigger reflow
+            content.classList.add('animate-fade-up');
+        } else {
+            content.classList.add('hidden');
+        }
+    });
+};
 
 // --- RENDER FUNCTIONS (Premium Grid) ---
 function renderProfilePosts(posts, container) {
@@ -1041,3 +1032,601 @@ function updateCartBadge() {
         else badge.classList.add('hidden');
     }
 }
+
+// --- BOOKING LOGIC ---
+
+window.openBookingModal = async function(restaurantId, restaurantName) {
+    const modalContainer = document.getElementById('bookingModal');
+    if (!modalContainer) {
+        console.error('Booking modal container not found');
+        return;
+    }
+
+    // Modal HTML Structure
+    modalContainer.innerHTML = `
+        <div class="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center backdrop-blur-md animate-fade-in">
+            <div class="bg-[#1a1a1a] w-full max-w-md rounded-2xl border border-white/10 shadow-2xl overflow-hidden transform scale-95 opacity-0 animate-scale-in">
+                
+                <!-- Header -->
+                <div class="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                    <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                        <i class="far fa-calendar-alt text-[#FF6B35]"></i> Book a Table
+                    </h3>
+                    <button onclick="closeBookingModal()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Body -->
+                <div class="p-6">
+                    <p class="text-gray-400 text-sm mb-6">Reserve a table at <span class="text-white font-semibold">${restaurantName}</span></p>
+                    
+                    <form id="bookingForm" onsubmit="submitBooking(event, ${restaurantId})">
+                        
+                        <!-- Date & Time -->
+                        <div class="mb-4">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Date & Time</label>
+                            <input type="datetime-local" id="bookingDateTime" required 
+                                   class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B35] transition-colors">
+                        </div>
+                        
+                        <!-- People Count -->
+                        <div class="mb-6">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Number of Guests</label>
+                            <div class="flex items-center gap-4 bg-black/40 border border-white/10 rounded-xl px-4 py-2">
+                                <button type="button" onclick="adjustGuests(-1)" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                                    <i class="fas fa-minus text-xs"></i>
+                                </button>
+                                <input type="number" id="bookingGuests" value="2" min="1" max="20" required readonly
+                                       class="bg-transparent text-center text-white font-bold w-full focus:outline-none text-lg">
+                                <button type="button" onclick="adjustGuests(1)" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors">
+                                    <i class="fas fa-plus text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table Selection (Optional for now, user selects preference) -->
+                        <div class="mb-6">
+                             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Table Preference (Optional)</label>
+                             <select id="tablePreference" class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF6B35] transition-colors appearance-none">
+                                <option value="">Any available table</option>
+                                <option value="window">Window Seat</option>
+                                <option value="booth">Booth</option>
+                                <option value="outdoor">Outdoor</option>
+                             </select>
+                        </div>
+                        
+                        <button type="submit" id="btnBookCallback" class="w-full bg-[#FF6B35] hover:bg-[#e05a2b] text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                            <span>Confirm Booking</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Set min datetime to now
+    const now = new Date();
+    // Adjust for timezone offset to get local ISO string correctly for input
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('bookingDateTime').min = now.toISOString().slice(0, 16);
+    document.getElementById('bookingDateTime').value = now.toISOString().slice(0, 16);
+
+    // Animation helper
+    requestAnimationFrame(() => {
+        const modal = modalContainer.querySelector('.animate-scale-in');
+        if(modal) {
+            modal.style.opacity = '1';
+            modal.style.transform = 'scale(1)';
+        }
+    });
+};
+
+window.closeBookingModal = function() {
+    const modalContainer = document.getElementById('bookingModal');
+    if (modalContainer) modalContainer.innerHTML = '';
+};
+
+window.adjustGuests = function(delta) {
+    const input = document.getElementById('bookingGuests');
+    let val = parseInt(input.value) + delta;
+    if (val < 1) val = 1;
+    if (val > 20) val = 20;
+    input.value = val;
+};
+
+window.submitBooking = async function(event, restaurantId) {
+    event.preventDefault();
+    
+    const dateTime = document.getElementById('bookingDateTime').value;
+    const guests = document.getElementById('bookingGuests').value;
+    const btn = document.getElementById('btnBookCallback');
+    
+    // Validate
+    if (!dateTime) {
+        alert('Please select a date and time.');
+        return;
+    }
+
+    // Loading State
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    btn.disabled = true;
+    
+    try {
+        // First fetch available tables (Simulated logic for now since we don't have a direct "find table" endpoint exposed yet easily)
+        // Ideally we call an endpoint that returns a table ID.
+        // For MVP: We will randomly assign a table from the restaurant for this booking or create a pending booking.
+        // Let's fetch tables first.
+        
+        const tablesRes = await fetch(`/api/tables/?restaurant=${restaurantId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } // If using token auth
+        });
+        
+        // If 401, redirect to login
+        if(tablesRes.status === 401 || tablesRes.status === 403) {
+             alert("Please login to book a table.");
+             window.location.href = '/login/';
+             return;
+        }
+
+        const tables = await tablesRes.json();
+        
+        // Find a suitable table (simple logic: any table with capacity >= guests)
+        
+        let tableId = null;
+        if (tables && tables.length > 0) {
+            const offset = parseInt(guests) 
+            const suitableTable = tables.find(t => t.capacity >= offset);
+            tableId = suitableTable ? suitableTable.id : tables[0].id;
+        } else {
+             // Fallback/Error if no tables exist for restaurant
+             // check if we can creating a booking without table? BookingSerializer has table as required usually?
+             // Checking BookingSerializer again... yes table is required.
+             alert("Sorry, this restaurant has no tables configured for online booking yet.");
+             btn.innerHTML = originalText;
+             btn.disabled = false;
+             return;
+        }
+        
+        const bookingData = {
+            restaurant: restaurantId,
+            table: tableId,
+            date_time: dateTime,
+            people_count: parseInt(guests),
+            status: 'Confirmed'
+        };
+        
+        const response = await fetch('/api/bookings/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(bookingData)
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(JSON.stringify(err));
+        }
+        
+        const result = await response.json();
+         
+        // Success
+        closeBookingModal();
+        
+        // Show Success Toast/Modal
+        const successModal = document.createElement('div');
+        successModal.className = 'fixed inset-0 bg-black/90 z-[70] flex items-center justify-center backdrop-blur-md animate-fade-in';
+        successModal.innerHTML = `
+            <div class="bg-[#1a1a1a] p-8 rounded-2xl border border-green-500/20 shadow-2xl text-center max-w-sm w-full mx-4">
+                <div class="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500 text-3xl">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Booking Confirmed!</h3>
+                <p class="text-gray-400 text-sm mb-6">Your table for ${guests} people has been reserved.</p>
+                <button onclick="this.closest('div.fixed').remove(); window.location.href='/bookings/'" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-colors">
+                    View My Bookings
+                </button>
+            </div>
+        `;
+        document.body.appendChild(successModal);
+
+    } catch (error) {
+        console.error('Booking failed:', error);
+        alert('Booking failed. Please try again. ' + (error.message || ''));
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+
+// Add Animation Styles if not present
+if (!document.getElementById('animation-styles')) {
+    const style = document.createElement('style');
+    style.id = 'animation-styles';
+    style.innerHTML = `
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        .animate-scale-in { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    `;
+    document.head.appendChild(style);
+}
+
+/* =========================================
+   RESTAURANT DASHBOARD FUNCTIONS
+   ========================================= */
+
+// --- Add Food Item ---
+function openAddFoodModal() { document.getElementById('addFoodModal').style.display = 'block'; }
+function closeAddFoodModal() { document.getElementById('addFoodModal').style.display = 'none'; }
+
+async function addFoodItem() {
+    const name = document.getElementById('newItemName').value;
+    const category = document.getElementById('newItemCategory').value;
+    const price = document.getElementById('newItemPrice').value;
+    // Optional video
+    const videoUrl = document.getElementById('newItemVideo') ? document.getElementById('newItemVideo').value : '';
+
+    if(!name || !price) {
+        alert("Please fill in Name and Price");
+        return;
+    }
+
+    const payload = {
+        name: name,
+        category: category,
+        price: price,
+        video_url: videoUrl,
+        is_available: true
+    };
+
+    try {
+        const res = await fetch('/api/food-items/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if(res.ok) {
+            alert('Item added successfully!');
+            closeAddFoodModal();
+            // Clear form
+            document.getElementById('newItemName').value = '';
+            document.getElementById('newItemPrice').value = '';
+            if(document.getElementById('newItemVideo')) document.getElementById('newItemVideo').value = '';
+        } else {
+            const data = await res.json();
+            alert('Error adding item: ' + JSON.stringify(data));
+        }
+    } catch(err) {
+        console.error(err);
+        alert('Failed to connect to server.');
+    }
+}
+
+// --- Upload Reel ---
+function openUploadReelModal() { document.getElementById('uploadReelModal').style.display = 'block'; }
+function closeUploadReelModal() { document.getElementById('uploadReelModal').style.display = 'none'; }
+
+async function handleReelUpload(event) {
+    event.preventDefault();
+    const videoFile = document.getElementById('reelVideoFile').files[0];
+    const caption = document.getElementById('reelCaption').value;
+    
+    if (!videoFile) {
+        alert("Please select a video file.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('video_file', videoFile);
+    formData.append('caption', caption);
+
+    const btn = event.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/reels/upload/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert('✅ Reel uploaded successfully!');
+            closeUploadReelModal();
+            document.getElementById('reelVideoFile').value = '';
+            document.getElementById('reelCaption').value = '';
+        } else {
+            const data = await response.json();
+            alert('❌ Error uploading reel: ' + (data.error || JSON.stringify(data)));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Failed to connect to server.');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// --- Offers & Notifications (Customer) ---
+let currentOfferFilter = 'all';
+
+async function fetchOffers() {
+    try {
+        const url = currentOfferFilter === 'followed' ? '/api/offers/?followed=true' : '/api/offers/';
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) return; // Silent fail or handle
+        const data = await response.json();
+        const offers = data.results || data;
+        displayOffers(offers);
+    } catch (error) {
+        console.error('Error fetching offers:', error);
+    }
+}
+
+function displayOffers(offers) {
+    const grid = document.getElementById('offersGrid');
+    if(!grid) return;
+    
+    if (offers.length === 0) {
+        grid.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500">No offers available</div>';
+        return;
+    }
+    
+    grid.innerHTML = offers.map(offer => `
+        <div class="glass-card p-4 rounded-xl relative overflow-hidden group">
+            <div class="absolute top-0 right-0 bg-[#FF6B35] text-white text-xs font-bold px-2 py-1 rounded-bl-lg">${offer.discount_percentage}% OFF</div>
+            <h3 class="font-bold text-lg mb-1">${offer.title}</h3>
+            <p class="text-sm text-gray-400 mb-2">${offer.restaurant_name}</p>
+            <p class="text-xs text-gray-500 mb-4 line-clamp-2">${offer.description}</p>
+            <button class="w-full py-2 rounded-lg bg-white/5 hover:bg-[#FF6B35] transition-colors text-sm font-medium" onclick="claimOffer(${offer.id})">Claim Offer</button>
+        </div>
+    `).join('');
+}
+
+async function claimOffer(offerId) {
+    try {
+        const response = await fetch(`/api/offers/${offerId}/claim/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        const data = await response.json();
+        if (response.ok) {
+            alert('✅ ' + data.message);
+            fetchOffers();
+        } else {
+            alert('❌ ' + (data.message || 'Failed to claim'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// --- Settings ---
+async function saveUserSettings() {
+    // Simplified for now, grab inputs safely
+    const nameInput = document.getElementById('settingsName'); // might need to add id back to dashboard.html form
+    const emailInput = document.getElementById('settingsEmail'); // same
+    
+    // For now, just alert success as placeholder if inputs missing
+    alert('Settings saved (Simulation)'); 
+}
+
+// --- Menu Management (Restaurant) ---
+async function fetchRestaurantMenu() {
+    const grid = document.getElementById('restaurantMenuGrid');
+    if(!grid) return;
+    
+    grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i> Loading your menu...</div>';
+
+    try {
+        // Fetch items for the logged-in restaurant
+        const response = await fetch('/api/food-items/?restaurant=me', {
+            headers: {
+                'Authorization': `Token ${localStorage.getItem('authToken') || ''}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch menu');
+        
+        const data = await response.json();
+        const items = data.results || data;
+        
+        if (items.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-12 text-gray-500">
+                    <i class="fas fa-utensils text-4xl mb-4 opacity-30"></i>
+                    <p>You haven't added any items yet.</p>
+                    <button class="btn btn-primary mt-4" onclick="openAddFoodModal()">Add Your First Item</button>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = items.map(item => `
+            <div class="glass-card rounded-xl overflow-hidden group relative">
+                <div class="h-40 bg-gray-800 relative">
+                     <img src="${item.image || 'https://via.placeholder.com/300x200?text=No+Image'}" alt="${item.name}" class="w-full h-full object-cover">
+                     <div class="absolute top-2 right-2 flex gap-2">
+                        <button class="w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm transition-colors" onclick="editFoodItem(${item.id})">
+                            <i class="fas fa-pen text-xs"></i>
+                        </button>
+                        <button class="w-8 h-8 rounded-full bg-red-500/80 hover:bg-red-600 text-white flex items-center justify-center backdrop-blur-sm transition-colors" onclick="deleteFoodItem(${item.id})">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                     </div>
+                </div>
+                <div class="p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-lg">${item.name}</h4>
+                        <span class="text-[#FF6B35] font-bold">₹${item.price}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-gray-400 mb-4">
+                        <span class="px-2 py-1 rounded-md bg-white/5 border border-white/10">${item.category}</span>
+                        <span class="flex items-center gap-1"><i class="fas fa-star text-yellow-500"></i> ${item.rating || 'New'}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                         <span class="text-xs ${item.is_available ? 'text-green-500' : 'text-red-500'} font-medium">
+                            <i class="fas fa-circle text-[8px] mr-1"></i> ${item.is_available ? 'Available' : 'Unavailable'}
+                         </span>
+                         <label class="switch scale-75">
+                            <input type="checkbox" ${item.is_available ? 'checked' : ''} onchange="toggleItemAvailability(${item.id}, this.checked)">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error fetching menu:', error);
+        grid.innerHTML = '<div class="col-span-full text-center py-12 text-red-500">Failed to load menu.</div>';
+    }
+}
+
+async function deleteFoodItem(itemId) {
+    if(!confirm('Are you sure you want to delete this item?')) return;
+    
+    try {
+        const response = await fetch(`/api/food-items/${itemId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        if(response.ok) {
+            fetchRestaurantMenu(); // Refresh
+        } else {
+            alert('Failed to delete item');
+        }
+    } catch(err) {
+        console.error(err);
+        alert('Error connecting to server');
+    }
+}
+
+async function editFoodItem(itemId) {
+    try {
+        const response = await fetch(`/api/food-items/${itemId}/`);
+        if(!response.ok) throw new Error('Failed to fetch item details');
+        
+        const item = await response.json();
+        
+        // Populate Modal
+        document.getElementById('newItemName').value = item.name;
+        // Handle category selection - might need to loop options or just set value
+        const catSelect = document.getElementById('newItemCategory');
+        if(catSelect) catSelect.value = item.category; 
+        
+        document.getElementById('newItemPrice').value = item.price;
+        if(document.getElementById('newItemVideo')) document.getElementById('newItemVideo').value = item.video_url || '';
+        
+        // Change Modal Button to 'Update'
+        const btn = document.querySelector('#addFoodModal button[onclick="addFoodItem()"]');
+        if(btn) {
+            btn.innerHTML = 'Update Item';
+            btn.onclick = function() { updateFoodItem(itemId); };
+        }
+        
+        openAddFoodModal();
+        
+        // Hook into close to reset button
+        const closeBtn = document.querySelector('#addFoodModal .close-modal');
+        const oldClose = closeBtn.onclick;
+        closeBtn.onclick = function() {
+            resetAddModalState();
+            oldClose();
+        };
+
+    } catch(err) {
+        console.error(err);
+        alert('Failed to load item for editing');
+    }
+}
+
+async function updateFoodItem(itemId) {
+    const name = document.getElementById('newItemName').value;
+    const category = document.getElementById('newItemCategory').value;
+    const price = document.getElementById('newItemPrice').value;
+    const videoUrl = document.getElementById('newItemVideo') ? document.getElementById('newItemVideo').value : '';
+
+    try {
+        const res = await fetch(`/api/food-items/${itemId}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                name: name,
+                category: category,
+                price: price,
+                video_url: videoUrl
+            })
+        });
+
+        if(res.ok) {
+            alert('Item updated successfully!');
+            closeAddFoodModal();
+            resetAddModalState();
+            fetchRestaurantMenu();
+        } else {
+            alert('Failed to update item');
+        }
+    } catch(err) {
+        console.error(err);
+        alert('Error connecting to server');
+    }
+}
+
+function resetAddModalState() {
+    const btn = document.querySelector('#addFoodModal button.btn-primary');
+    if(btn) {
+        btn.innerHTML = 'Add Item';
+        btn.onclick = addFoodItem;
+    }
+    document.getElementById('newItemName').value = '';
+    document.getElementById('newItemPrice').value = '';
+    if(document.getElementById('newItemVideo')) document.getElementById('newItemVideo').value = '';
+}
+
+async function toggleItemAvailability(itemId, isAvailable) {
+     try {
+        await fetch(`/api/food-items/${itemId}/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ is_available: isAvailable })
+        });
+        // No need to refresh full list, update UI locally if needed, but existing switch handles visual
+    } catch(err) {
+        console.error(err);
+        alert('Failed to update status');
+    }
+}
+

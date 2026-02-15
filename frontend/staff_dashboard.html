@@ -2,59 +2,478 @@
 {% load static %}
 
 {% block content %}
-<div class="dashboard-container">
-    <div class="sidebar">
-        <h3>Staff Panel</h3>
-        <ul class="nav-links">
-            <li><a href="/dashboard/"><i class="fas fa-arrow-left"></i> Back to Dashboard</a></li> <!-- Back Button -->
-            <li><a href="#" class="active" onclick="showSection('tables')"><i class="fas fa-th-large"></i> Tables</a></li>
-            <li><a href="#" onclick="showSection('orders')"><i class="fas fa-clipboard-list"></i> Active Orders</a></li>
-        </ul>
-    </div>
-
-    <div class="main-content">
-        <header style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h2>Table Management</h2>
-                <div class="user-info">
-                    <span>{{ user.username }} (Staff)</span>
-                </div>
+<div class="staff-dashboard">
+    <!-- Sidebar Navigation -->
+    <aside class="glass-sidebar">
+        <div class="brand">
+            <i class="fas fa-utensils"></i> Deliciae Staff
+        </div>
+        <nav class="nav-menu">
+            <a href="/dashboard/" class="nav-item">
+                <i class="fas fa-arrow-left"></i> <span>Back to Dashboard</span>
+            </a>
+            <a href="#" class="nav-item active" onclick="showSection('tables')" id="nav-tables">
+                <i class="fas fa-th-large"></i> <span>Tables</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showSection('orders')" id="nav-orders">
+                <i class="fas fa-clipboard-list"></i> <span>Active Orders</span>
+            </a>
+        </nav>
+        <div class="user-profile">
+            <div class="avatar">{{ user.username|make_list|first|upper }}</div>
+            <div class="info">
+                <span class="name">{{ user.username }}</span>
+                <span class="role">Staff Member</span>
             </div>
-            <button class="btn btn-primary" onclick="addTable()"><i class="fas fa-plus"></i> Add Table</button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <header class="top-bar">
+            <h2 id="page-title">Table Management</h2>
+            <button class="btn-glow" onclick="addTable()">
+                <i class="fas fa-plus"></i> Add Table
+            </button>
         </header>
 
-        <!-- Tables Grid -->
-        <div id="tables-view" class="tables-grid">
-            <!-- Tables injected by JS -->
-            <div class="loading">Loading tables...</div>
-        </div>
+        <!-- Tables View -->
+        <section id="tables-view" class="content-section active">
+            <div class="tables-grid">
+                <div class="loading-spinner"></div>
+            </div>
+        </section>
 
-        <!-- Active Orders View -->
-        <div id="orders-view" class="orders-grid" style="display:none;">
-            <div class="loading">Loading active orders...</div>
-        </div>
-        
-        <!-- Order Modal -->
-        <div id="order-modal" class="modal" style="display:none;">
-            <div class="modal-content">
-                <span class="close" onclick="closeOrderModal()">&times;</span>
-                <h3>Order for Table #<span id="modal-table-num"></span></h3>
-                <div class="menu-selection">
-                    <input type="text" id="menu-search" placeholder="Search food..." onkeyup="filterMenu()">
+        <!-- Orders View -->
+        <section id="orders-view" class="content-section" style="display: none;">
+            <div class="orders-grid">
+                <div class="loading-spinner"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Order Modal -->
+    <div id="order-modal" class="modal-overlay">
+        <div class="modal-glass">
+            <div class="modal-header">
+                <h3>Table #<span id="modal-table-num"></span></h3>
+                <button class="close-btn" onclick="closeOrderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="menu-section">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="menu-search" placeholder="Search menu..." onkeyup="filterMenu()">
+                    </div>
                     <div id="menu-items-list" class="menu-list">
-                        <!-- Menu items injected by JS -->
+                        <!-- Items injected via JS -->
                     </div>
                 </div>
-                <div class="order-summary">
+                <div class="order-summary-section">
                     <h4>Current Order</h4>
-                    <ul id="selected-items-list"></ul>
-                    <button class="btn btn-primary" onclick="placeOrder()">Place Order</button>
-                    <button class="btn btn-secondary" onclick="generateBill()" id="btn-bill" style="display:none;">Generate Bill</button>
+                    <ul id="selected-items-list" class="order-list"></ul>
+                    <div class="order-actions">
+                        <button class="btn-primary" onclick="placeOrder()">Place Order</button>
+                        <button class="btn-secondary" onclick="generateBill()" id="btn-bill" style="display:none;">Generate Bill</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    :root {
+        --bg-dark: #0f0f13;
+        --glass-bg: rgba(255, 255, 255, 0.05);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --primary: #ff6b35;
+        --secondary: #2d3436;
+        --text-main: #ffffff;
+        --text-muted: #a0a0a0;
+        --available: #00b894;
+        --occupied: #ff7675;
+        --cleaning: #fdcb6e;
+    }
+
+    body {
+        margin: 0;
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        font-family: 'Inter', sans-serif;
+    }
+
+    .staff-dashboard {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Sidebar */
+    .glass-sidebar {
+        width: 260px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border-right: 1px solid var(--glass-border);
+        display: flex;
+        flex-direction: column;
+        padding: 2rem 1.5rem;
+    }
+
+    .brand {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 3rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .nav-menu {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 15px;
+        color: var(--text-muted);
+        text-decoration: none;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .nav-item:hover, .nav-item.active {
+        background: rgba(255, 107, 53, 0.15);
+        color: var(--primary);
+    }
+    
+    .nav-item.active {
+        box-shadow: 0 0 15px rgba(255, 107, 53, 0.1);
+    }
+
+    .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-top: 20px;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .avatar {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, var(--primary), #ffa502);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+    }
+
+    .user-profile .info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-profile .name { font-weight: 600; font-size: 0.9rem; }
+    .user-profile .role { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* Main Content */
+    .main-content {
+        flex: 1;
+        padding: 2rem 3rem;
+        overflow-y: auto;
+        background: radial-gradient(circle at top right, rgba(255, 107, 53, 0.1), transparent 40%);
+    }
+
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+    }
+
+    h2 { font-size: 2rem; margin: 0; }
+
+    .btn-glow {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-glow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+    }
+
+    /* Tables Grid */
+    .tables-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 25px;
+    }
+
+    .table-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .table-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .table-num {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+        z-index: 1;
+    }
+
+    .table-status {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+        z-index: 1;
+    }
+
+    .table-seats {
+        margin-top: 15px;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* Status Indicators */
+    .available .table-num { color: var(--available); }
+    .available .table-status { background: rgba(0, 184, 148, 0.2); color: var(--available); }
+    .available { border-bottom: 4px solid var(--available); }
+
+    .occupied .table-num { color: var(--occupied); }
+    .occupied .table-status { background: rgba(255, 118, 117, 0.2); color: var(--occupied); }
+    .occupied { border-bottom: 4px solid var(--occupied); }
+
+    .cleaning .table-num { color: var(--cleaning); }
+    .cleaning .table-status { background: rgba(253, 203, 110, 0.2); color: var(--cleaning); }
+    .cleaning { border-bottom: 4px solid var(--cleaning); }
+    
+    .booked .table-num { color: #0984e3; }
+    .booked .table-status { background: rgba(9, 132, 227, 0.2); color: #0984e3; }
+    .booked { border-bottom: 4px solid #0984e3; }
+
+    .booking-info {
+        margin-top: 1rem;
+        font-size: 0.85rem;
+        text-align: left;
+        width: 100%;
+        background: rgba(0,0,0,0.2);
+        padding: 10px;
+        border-radius: 8px;
+    }
+
+    /* Orders View */
+    .orders-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .order-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--glass-border);
+    }
+    
+    .status-tag {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+    .status-tag.ordered { background: rgba(253, 203, 110, 0.2); color: var(--cleaning); }
+    .status-tag.preparing { background: rgba(9, 132, 227, 0.2); color: #74b9ff; }
+    .status-tag.served { background: rgba(0, 184, 148, 0.2); color: var(--available); }
+
+    .order-items { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; color: #ddd; }
+    .order-items li { padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+    
+    .order-total {
+        margin-top: 1rem;
+        text-align: right;
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: var(--primary);
+    }
+
+    /* Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-glass {
+        background: #1e1e24;
+        width: 90%;
+        max-width: 800px;
+        border-radius: 20px;
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        max-height: 90vh;
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        background: rgba(255,255,255,0.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-body {
+        display: flex;
+        padding: 0;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .menu-section {
+        flex: 1.5;
+        padding: 1.5rem;
+        border-right: 1px solid var(--glass-border);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .order-summary-section {
+        flex: 1;
+        padding: 1.5rem;
+        background: rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .search-bar {
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        padding: 10px 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 1rem;
+    }
+
+    .search-bar input {
+        background: transparent;
+        border: none;
+        color: white;
+        outline: none;
+        width: 100%;
+    }
+
+    .menu-list, .order-list {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .menu-item {
+        background: rgba(255,255,255,0.03);
+        padding: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        transition: background 0.2s;
+    }
+    .menu-item:hover { background: rgba(255,255,255,0.08); }
+
+    .btn-primary, .btn-secondary {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+
+    /* Loading Spinner */
+    .loading-spinner {
+        border: 4px solid rgba(255,255,255,0.1);
+        border-left-color: var(--primary);
+        border-radius: 50%;
+        width: 40px; height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 50px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .staff-dashboard { flex-direction: column; }
+        .glass-sidebar { width: 100%; height: auto; padding: 1rem; flex-direction: row; justify-content: space-between; align-items: center; }
+        .nav-menu { display: none; } /* Hide regular nav on mobile, maybe add hamburger later */
+        .user-profile { border-top: none; padding: 0; }
+        .main-content { padding: 1rem; }
+        .modal-body { flex-direction: column; }
+        .menu-section { border-right: none; border-bottom: 1px solid var(--glass-border); }
+    }
+</style>
 
 <script>
     const API_BASE = '/api/';
@@ -68,32 +487,44 @@
         fetchMenu();
         // Poll for updates every 30s
         setInterval(() => {
-            if(document.getElementById('tables-view').style.display !== 'none') fetchTables();
-            if(document.getElementById('orders-view').style.display !== 'none') fetchActiveOrders();
+            const tablesView = document.getElementById('tables-view');
+            const ordersView = document.getElementById('orders-view');
+            
+            if(tablesView.classList.contains('active')) fetchTables();
+            if(ordersView.style.display !== 'none') fetchActiveOrders(); // Fallback check
         }, 30000);
     });
 
     function showSection(sectionId) {
+        // Hide all
         document.getElementById('tables-view').style.display = 'none';
         document.getElementById('orders-view').style.display = 'none';
+        document.getElementById('tables-view').classList.remove('active');
+        document.getElementById('orders-view').classList.remove('active');
         
-        // Remove active class from nav links
-        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+        // Remove active class from nav
+        document.querySelectorAll('.nav-item').forEach(a => a.classList.remove('active'));
 
         if(sectionId === 'tables') {
-            document.getElementById('tables-view').style.display = 'grid';
-            document.querySelector('.nav-links a:first-child').classList.add('active');
+            const section = document.getElementById('tables-view');
+            section.style.display = 'block';
+            section.classList.add('active');
+            document.getElementById('nav-tables').classList.add('active');
+            document.getElementById('page-title').textContent = 'Table Management';
             fetchTables();
         } else if(sectionId === 'orders') {
-            document.getElementById('orders-view').style.display = 'grid';
-            document.querySelectorAll('.nav-links a')[1].classList.add('active'); // 2nd link
+            const section = document.getElementById('orders-view');
+            section.style.display = 'block';
+            section.classList.add('active');
+            document.getElementById('nav-orders').classList.add('active');
+            document.getElementById('page-title').textContent = 'Active Orders';
             fetchActiveOrders();
         }
     }
 
     async function fetchActiveOrders() {
-        const container = document.getElementById('orders-view');
-        container.innerHTML = '<div class="loader"></div>';
+        const container = document.querySelector('#orders-view .orders-grid');
+        container.innerHTML = '<div class="loading-spinner"></div>';
         
         try {
             const res = await fetch(`${API_BASE}dining-orders/?status=Ordered,Preparing,Served&t=${new Date().getTime()}`);
@@ -102,7 +533,7 @@
             
             container.innerHTML = '';
             if(!orders || orders.length === 0) {
-                container.innerHTML = '<p>No active orders.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#aaa; width:100%;">No active orders found.</p>';
                 return;
             }
 
@@ -121,19 +552,22 @@
                         ${itemsHtml}
                     </ul>
                     <div class="order-total">Total: ${order.total_amount}</div>
-                    <div class="time-ago">🕒 ${new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    <div class="time-ago" style="font-size:0.8rem; color:#aaa; margin-top:5px; text-align:right;">
+                        <i class="fas fa-clock"></i> ${new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </div>
                 `;
                 container.appendChild(card);
             });
         } catch(err) {
             console.error(err);
-            container.innerHTML = '<p>Error loading orders.</p>';
+            container.innerHTML = '<p style="color:red">Error loading orders.</p>';
         }
     }
 
     async function fetchTables() {
-        const container = document.getElementById('tables-view');
-        container.innerHTML = '<div class="loader"></div>';
+        const container = document.querySelector('.tables-grid');
+        // Don't wipe content if refreshing to prevent flash, but for now it's okay
+        // container.innerHTML = '<div class="loading-spinner"></div>';
         
         try {
             const res = await fetch(`${API_BASE}tables/?t=${new Date().getTime()}`);
@@ -142,7 +576,7 @@
             
             container.innerHTML = '';
             if(!tables || tables.length === 0) {
-                container.innerHTML = '<p>No tables found.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#aaa; width:100%;">No tables found. Add one!</p>';
                 return;
             }
 
@@ -150,24 +584,31 @@
                 const card = document.createElement('div');
                 card.className = `table-card ${table.status.toLowerCase()}`;
                 card.onclick = () => openOrderModal(table);
-                card.innerHTML = `
-                    <div class="table-num">${table.table_number}</div>
-                    <div class="table-status">${table.status}</div>
-                    
-                    ${table.status === 'Booked' && table.booking_details ? `
-                        <div class="booking-info" style="font-size:0.9em; margin-top:5px; border-top:1px dashed #ddd; padding-top:5px;">
+                
+                let statusContent = '';
+                if (table.status === 'Booked' && table.booking_details) {
+                     statusContent = `
+                        <div class="booking-info">
                             <div><i class="fas fa-user"></i> ${table.booking_details.customer_name}</div>
-                            <div><i class="fas fa-phone"></i> ${table.booking_details.phone_number}</div>
                             <div><i class="fas fa-clock"></i> ${table.booking_details.time}</div>
-                            <button class="btn btn-sm btn-danger mt-2" onclick="event.stopPropagation(); cancelBooking(${table.id})">Cancel</button>
+                            <button class="btn-sm" style="background:#e74c3c; border:none; color:white; border-radius:4px; padding:4px 8px; margin-top:5px; cursor:pointer;" 
+                                onclick="event.stopPropagation(); cancelBooking(${table.id})">Cancel</button>
                         </div>
-                    ` : `<div class="table-seats"><i class="fas fa-users"></i> ${table.capacity}</div>`}
+                    `;
+                } else {
+                    statusContent = `<div class="table-seats"><i class="fas fa-users"></i> ${table.capacity} Seats</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="table-num">T-${table.table_number}</div>
+                    <div class="table-status">${table.status}</div>
+                    ${statusContent}
                 `;
                 container.appendChild(card);
             });
         } catch (err) {
             console.error(err);
-            container.innerHTML = '<p>Error loading tables.</p>';
+            container.innerHTML = '<p style="color:red">Error loading tables.</p>';
         }
     }
 
@@ -187,16 +628,15 @@
                 div.className = 'menu-item';
                 div.onclick = () => addItemToOrder(item);
                 div.innerHTML = `
-                    <span>${item.name}</span>
-                    <span>${item.currency_symbol}${item.price}</span>
+                    <div style="font-weight:600;">${item.name}</div>
+                    <div style="color:var(--primary);">${item.currency_symbol}${item.price}</div>
                 `;
                 list.appendChild(div);
             });
-        } catch(err) {
-            console.error('Error fetching menu:', err);
-        }
+        } catch(err) { console.error('Error fetching menu:', err); }
     }
 
+    // ... (Keep existing order logic functions)
     function addItemToOrder(item) {
         selectedItems.push(item);
         updateSelectedItemsUI();
@@ -212,17 +652,32 @@
         list.innerHTML = '';
         let total = 0;
         
+        if(selectedItems.length === 0) list.innerHTML = '<li style="color:#aaa; text-align:center;">No items selected</li>';
+
         selectedItems.forEach((item, index) => {
             total += parseFloat(item.price);
             const li = document.createElement('li');
-            li.innerHTML = `${item.name} - ${item.currency_symbol}${item.price} <i class="fas fa-times text-danger" style="cursor:pointer; margin-left:10px;" onclick="removeItemFromOrder(${index})"></i>`;
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.padding = '8px 0';
+            li.innerHTML = `
+                <span>${item.name}</span>
+                <span>
+                    ${item.currency_symbol}${item.price} 
+                    <i class="fas fa-trash" style="color:#ff7675; cursor:pointer; margin-left:10px;" onclick="removeItemFromOrder(${index})"></i>
+                </span>`;
             list.appendChild(li);
         });
         
         // Add Total Display
         if(selectedItems.length > 0) {
             const totalDiv = document.createElement('div');
-            totalDiv.innerHTML = `<strong>Total: ${selectedItems[0].currency_symbol}${total.toFixed(2)}</strong>`;
+            totalDiv.style.textAlign = 'right';
+            totalDiv.style.fontWeight = 'bold';
+            totalDiv.style.marginTop = '10px';
+            totalDiv.style.borderTop = '1px solid #444';
+            totalDiv.style.paddingTop = '10px';
+            totalDiv.innerHTML = `Total: ${selectedItems[0].currency_symbol}${total.toFixed(2)}`;
             list.appendChild(totalDiv);
         }
     }
@@ -237,123 +692,82 @@
     }
 
     async function placeOrder() {
-        if(selectedItems.length === 0) {
-            alert('Please select items first');
-            return;
-        }
+        if(selectedItems.length === 0) { alert('Please select items first'); return; }
 
         const itemIds = selectedItems.map(i => i.id);
-        const data = {
-            table: currentTableId,
-            items: itemIds,
-            // Status defaults to 'Ordered'
-        };
+        const data = { table: currentTableId, items: itemIds };
 
         try {
             const res = await fetch(`${API_BASE}dining-orders/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
                 body: JSON.stringify(data)
             });
 
             if(res.ok) {
                 alert('Order Placed Successfully!');
                 closeOrderModal();
-                // Optionally update table status to Occupied if it was Available
                 updateTableStatus(currentTableId, 'Occupied');
-                fetchTables(); // Refresh
+                fetchTables();
             } else {
                 const err = await res.json();
                 alert('Failed to place order: ' + JSON.stringify(err));
             }
-        } catch(e) {
-            console.error(e);
-            alert('Error placing order');
-        }
+        } catch(e) { console.error(e); alert('Error placing order'); }
     }
 
     async function updateTableStatus(tableId, status) {
         await fetch(`${API_BASE}tables/${tableId}/`, {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
             body: JSON.stringify({ status: status })
         });
     }
-
+    
+    // ... (Keep existing billing/payment logic)
     async function generateBill() {
-        if(!confirm('Generate Bill for this table? This will clear active orders.')) return;
-        
+        if(!confirm('Generate Bill for this table?')) return;
         try {
             const res = await fetch(`${API_BASE}billing/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({ 
-                    action: 'generate',
-                    table_id: currentTableId
-                })
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ action: 'generate', table_id: currentTableId })
             });
             
             if(res.ok) {
                 const bill = await res.json();
                 alert(`Bill Generated!\nTotal: ${bill.grand_total}\nPay now via Cash/Card/UPI`);
-                // Process Payment (Simulator)
                 processPayment(bill.id);
             } else {
                 const err = await res.json();
                 alert('Error: ' + err.error);
             }
-        } catch(e) {
-            console.error(e);
-        }
+        } catch(e) { console.error(e); }
     }
-
-    async function cancelBooking(tableId) {
-        if(!confirm('Are you sure you want to cancel this booking?')) return;
-        // In a real app, you'd have a specific endpoint or use BookingViewSet
-        // For now, we'll just free the table manually, but ideally we should update the Booking status too.
-        // Let's assume updating table status to 'Available' is enough for the visual part
-        try {
-            await updateTableStatus(tableId, 'Available');
-            alert('Booking Cancelled, Table Free.');
-            fetchTables();
-        } catch (e) {
-            alert('Error cancelling');
-        }
-    }
-
+    
     async function processPayment(billId) {
         const method = prompt("Enter Payment Method (Cash, Card, UPI):", "Cash");
         if(!method) return;
-        
         try {
             const res = await fetch(`${API_BASE}billing/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({ 
-                    action: 'pay',
-                    bill_id: billId,
-                    payment_method: method
-                })
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ action: 'pay', bill_id: billId, payment_method: method })
             });
-            
             if(res.ok) {
-                alert('Payment Successful! Table is now cleaning.');
+                alert('Payment Successful!');
                 closeOrderModal();
                 fetchTables();
             }
         } catch(e) { console.error(e); }
+    }
+    async function cancelBooking(tableId) {
+        if (!confirm('Cancel this booking?')) return;
+        try {
+            await updateTableStatus(tableId, 'Available');
+            alert('Booking Cancelled');
+            fetchTables();
+        } catch(e) { alert('Error cancelling'); }
     }
 
     function getCookie(name) {
@@ -376,13 +790,11 @@
         currentTableId = table.id;
         currentTableNum = table.table_number;
         document.getElementById('modal-table-num').textContent = currentTableNum;
-        document.getElementById('order-modal').style.display = 'block';
+        document.querySelector('.modal-overlay').style.display = 'flex'; // Changed to flex for centering
         
-        // Reset state
         selectedItems = [];
         updateSelectedItemsUI();
         
-        // Show/Hide Bill button based on status
         const btnBill = document.getElementById('btn-bill');
         if(table.status === 'Occupied' || table.status === 'Served') {
             btnBill.style.display = 'inline-block';
@@ -392,36 +804,27 @@
     }
 
     function closeOrderModal() {
-        document.getElementById('order-modal').style.display = 'none';
+        document.querySelector('.modal-overlay').style.display = 'none';
     }
 
-    // Close modal when clicking outside
     window.onclick = function(event) {
-        const modal = document.getElementById('order-modal');
+        const modal = document.querySelector('.modal-overlay');
         if (event.target == modal) {
             modal.style.display = "none";
         }
     }
-    // Add Table Logic
+
     async function addTable() {
         const tableNum = prompt("Enter new table number:");
         if(!tableNum) return;
-        
         const capacity = prompt("Enter capacity (seats):", "4");
         if(!capacity) return;
 
         try {
             const res = await fetch(`${API_BASE}tables/`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    table_number: tableNum,
-                    capacity: capacity,
-                    status: 'Available'
-                })
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ table_number: tableNum, capacity: capacity, status: 'Available' })
             });
 
             if(res.ok) {
@@ -431,68 +834,7 @@
                 const err = await res.json();
                 alert('Error: ' + JSON.stringify(err));
             }
-        } catch(e) {
-            console.error(e);
-            alert('Failed to connect.');
-        }
+        } catch(e) { console.error(e); alert('Failed to connect.'); }
     }
 </script>
-
-<style>
-    .tables-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 20px;
-        padding: 20px;
-    }
-    .table-card {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
-        cursor: pointer;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: transform 0.2s;
-        color: #333; /* Force dark text on white card */
-    }
-    .table-card:hover { transform: translateY(-5px); }
-    .table-card.available { border-top: 5px solid #2ecc71; }
-    .table-card.occupied { border-top: 5px solid #e74c3c; background-color: #fff0f0; }
-    .table-card.cleaning { border-top: 5px solid #f1c40f; }
-    
-    /* Order Cards */
-    .orders-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 20px;
-        padding: 20px;
-    }
-    .order-card {
-        background: white;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-left: 5px solid #ddd;
-        color: #333; /* Force dark text */
-    }
-    .order-card.ordered { border-left-color: #f1c40f; }
-    .order-card.preparing { border-left-color: #3498db; }
-    .order-card.served { border-left-color: #2ecc71; }
-    
-    .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .table-tag { font-weight: bold; font-size: 1.1em; }
-    .status-tag { padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.8em; }
-    .status-tag.ordered { background: #f1c40f; color: #333; }
-    .status-tag.preparing { background: #3498db; }
-    .status-tag.served { background: #2ecc71; }
-    
-    .order-items { list-style: none; padding: 0; margin: 10px 0; border-top: 1px dashed #eee; border-bottom: 1px dashed #eee; padding: 10px 0; }
-    .order-items li { padding: 2px 0; }
-    .order-total { font-weight: bold; text-align: right; margin-top: 5px; }
-    
-    .table-num { font-size: 2em; font-weight: bold; }
-    .modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-    .modal-content { background-color: #fff; margin: 10% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 8px; }
-    .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-</style>
 {% endblock %}

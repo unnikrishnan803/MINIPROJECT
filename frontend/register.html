@@ -105,7 +105,22 @@
             <h2>Create Account</h2>
             <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Join the smart dining revolution</p>
 
-            <form action="{% url 'account_signup' %}" method="POST">
+            {% if form.errors %}
+            <div class="error-messages" style="background: rgba(255,0,0,0.1); border: 1px solid #ff4b2b; color: #ff4b2b; padding: 10px; border-radius: 10px; margin-bottom: 1rem; text-align: left; font-size: 0.85rem;">
+                <ul style="margin: 0; padding-left: 20px;">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form action="{% url 'register' %}" method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
                 
                 <!-- Role Selector -->
@@ -127,12 +142,17 @@
 
                 <div class="form-group">
                     <label class="form-label">Email Address</label>
-                    <input type="email" name="email" class="form-input" placeholder="you@example.com" required>
+                    {{ form.email }}
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label">Password</label>
-                    <input type="password" name="password" class="form-input" placeholder="Create a strong password" required>
+                    {{ form.password1 }}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Confirm Password</label>
+                    {{ form.password2 }}
                 </div>
 
                 <!-- Restaurant Specific Fields (Hidden by default) -->
@@ -141,13 +161,13 @@
                     
                     <div class="form-group">
                         <label class="form-label">Restaurant Name</label>
-                        <input type="text" name="restaurant_name" class="form-input" placeholder="e.g. The Burger Joint">
+                        {{ form.restaurant_name }}
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">City / Location</label>
                         <div style="position: relative;">
-                            <input type="text" name="restaurant_location" id="id_restaurant_location" class="form-input" placeholder="e.g. Kochi">
+                            {{ form.restaurant_location }}
                             <i class="fas fa-map-marker-alt" style="position: absolute; right: 15px; top: 12px; color: var(--text-secondary);"></i>
                         </div>
                         <small style="color: grey; font-size: 0.8rem;">This will set your user location and help customers find you.</small>
@@ -155,13 +175,13 @@
 
                     <div class="form-group">
                         <label class="form-label">Google Maps Link</label>
-                        <input type="url" name="maps_link" class="form-input" placeholder="Paste Google Maps link here to auto-detect location">
+                        {{ form.maps_link }}
                         <small style="color: var(--accent-primary); font-size: 0.8rem;">We'll automatically set your precise GPS coordinates from this link!</small>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Image URL</label>
-                        <input type="url" name="restaurant_image_url" class="form-input" placeholder="https://...">
+                        {{ form.restaurant_image_url }}
                     </div>
                 </div>
 

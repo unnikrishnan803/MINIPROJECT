@@ -1,0 +1,614 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Posts | Deliciae Partner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <style>
+        /* Page Specific Styles */
+        .reels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .reel-card {
+            position: relative;
+            aspect-ratio: 9/16;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: #000;
+        }
+
+        .reel-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(255,107,53,0.3);
+        }
+
+        .reel-card video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .reel-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            padding: 20px;
+            opacity: 1; /* Always visible on mobile, maybe toggle on hover for desktop? keeping visible for now */
+            transition: opacity 0.3s;
+        }
+
+        .reel-stats {
+            display: flex;
+            gap: 15px;
+            color: white;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .reel-stats span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .reel-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .reel-card:hover .reel-actions {
+            opacity: 1;
+        }
+
+        .btn-icon-circle {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon-circle:hover {
+            background: white;
+            color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            border: 1px dashed rgba(255,255,255,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .reels-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
+                gap: 10px;
+                padding: 10px;
+            }
+            .reel-actions {
+                opacity: 1; /* Always show actions on mobile */
+            }
+        }
+    </style>
+</head>
+<body class="dashboard-body">
+
+    <div class="glow-bg top-left" style="opacity: 0.3;"></div>
+    <div class="glow-bg bottom-right" style="opacity: 0.3;"></div>
+
+    <div class="dashboard-container">
+        <!-- Sidebar (Same as Dashboard) -->
+        <aside class="sidebar glass-card">
+            <div class="logo">
+                <i class="fas fa-utensils"></i> Deliciae <span style="font-size: 0.6rem; background: var(--accent-primary); padding: 2px 5px; border-radius: 4px; margin-left: 5px;">Partner</span>
+            </div>
+            
+            <nav class="side-nav">
+                <a href="/restaurant/dashboard/" class="nav-item"><i class="fas fa-home"></i> Overview</a>
+                <a href="/restaurant/dashboard/?view=tables" class="nav-item"><i class="fas fa-th-large"></i> Manage Tables</a>
+                <a href="/kitchen-view/" class="nav-item"><i class="fas fa-fire"></i> Kitchen View</a>
+                <a href="/restaurant/dashboard/?view=orders" class="nav-item"><i class="fas fa-clipboard-list"></i> Orders</a>
+                <a href="/restaurant/dashboard/?view=offers" class="nav-item"><i class="fas fa-tags"></i> Offers</a>
+                <a href="/restaurant/videos/" class="nav-item active"><i class="fas fa-video"></i> My Posts</a> 
+                <a href="/restaurant/dashboard/?view=analytics" class="nav-item"><i class="fas fa-chart-line"></i> Analytics</a>
+                <a href="/restaurant/dashboard/?view=settings" class="nav-item"><i class="fas fa-cog"></i> Settings</a>
+            </nav>
+
+            <div class="user-profile">
+                <img src="{{ user.get_profile_picture }}" alt="Restaurant" class="avatar">
+                <div class="user-info">
+                    <h4>{{ user.restaurant_profile.name|default:user.username }}</h4>
+                    <p>{{ user.restaurant_profile.cuisine_type|default:'Cuisine' }}</p>
+                </div>
+                <a href="{% url 'account_logout' %}" class="logout-btn"><i class="fas fa-sign-out-alt"></i></a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <div class="header-text">
+                    <h1>My Posts</h1>
+                    <p>Manage your restaurant's reels and engagement.</p>
+                </div>
+                <button class="btn btn-primary" onclick="openAddReelModal()"><i class="fas fa-plus"></i> Upload New Reel</button>
+            </header>
+
+            <!-- Reels Grid Section -->
+            <div id="reels-container" class="reels-grid">
+                <!-- Content loaded via JS -->
+                <div class="loading" style="grid-column: 1/-1; text-align:center; color:white;">Loading your posts...</div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modal (Add Reel) -->
+    <div id="addReelModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close-modal" onclick="closeAddReelModal()">&times;</span>
+            <h2>Upload New Reel 🎥</h2>
+            <form onsubmit="event.preventDefault(); uploadReel();">
+                <div class="form-group">
+                    <label>Media File</label>
+                    <input type="file" id="reelVideoFile" class="form-input" accept="video/*,image/*" required onchange="handleFileSelect(event)">
+                    <small style="color: rgba(255,255,255,0.5);">Upload Video (MP4/WebM) or Image (JPG/PNG)</small>
+                </div>
+                <div class="form-group">
+                    <label>Caption</label>
+                    <textarea id="reelCaption" class="form-input" placeholder="Describe this delicious moment..." rows="3" required></textarea>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div id="uploadProgress" style="display:none; margin-top:15px;">
+                    <div style="width:100%; background:rgba(255,255,255,0.1); height:6px; border-radius:3px;">
+                        <div id="progressBar" style="width:0%; height:100%; background:var(--accent-primary); border-radius:3px; transition:width 0.3s;"></div>
+                    </div>
+                    <small id="uploadStatus" style="color:white; display:block; margin-top:5px; text-align:center;">Uploading...</small>
+                </div>
+
+                <button type="submit" id="uploadBtn" class="btn btn-primary btn-full" style="margin-top:15px;">Post Reel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal (Edit Reel) -->
+    <div id="editReelModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close-modal" onclick="document.getElementById('editReelModal').style.display='none'">&times;</span>
+            <h2>Edit Reel ✏️</h2>
+            <input type="hidden" id="editReelId">
+            <div class="form-group">
+                <label>Caption</label>
+                <textarea id="editReelCaption" class="form-input" rows="4"></textarea>
+            </div>
+            <button onclick="saveReelEdit()" class="btn btn-primary btn-full">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Add Reel Modal -->
+    <div id="addReelModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close-modal" onclick="closeAddReelModal()">&times;</span>
+            <h2>Upload New Reel 🎥</h2>
+            <form onsubmit="event.preventDefault(); uploadReel();">
+                <div class="form-group">
+                    <label>Caption</label>
+                    <textarea id="reelCaption" class="form-input" rows="3" placeholder="Write something catchy..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Media File</label>
+                    <div class="file-upload-wrapper" onclick="document.getElementById('reelVideoFile').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Click to upload Video or Image</p>
+                        <input type="file" id="reelVideoFile" class="form-input" accept="video/*,image/*" style="display:none" onchange="handleFileSelect(event)">
+                    </div>
+                    <div id="uploadStatus" style="margin-top: 10px; font-size: 0.9rem; color: var(--text-secondary);"></div>
+                </div>
+                
+                <div id="uploadProgress" class="progress-bar-container" style="display:none; margin: 15px 0;">
+                    <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddReelModal()">Cancel</button>
+                    <button type="submit" id="uploadBtn" class="btn btn-primary">Post Reel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Reel Modal -->
+    <div id="editReelModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close-modal" onclick="document.getElementById('editReelModal').style.display='none'">&times;</span>
+            <h2>Edit Reel</h2>
+            <input type="hidden" id="editReelId">
+            <div class="form-group">
+                <label>Caption</label>
+                <textarea id="editReelCaption" class="form-input" rows="3"></textarea>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="saveReelEdit()">Save Changes</button>
+        </div>
+    </div>
+
+    <style>
+        /* Essential Dashboard Styles */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; padding-bottom: 80px; }
+        }
+
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.8); 
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: #1a1a1a;
+            margin: 10% auto; 
+            padding: 20px; 
+            border: 1px solid #888;
+            width: 90%; 
+            max-width: 500px;
+            border-radius: 15px;
+            color: white;
+            position: relative;
+        }
+
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover,
+        .close-modal:focus {
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-input { 
+            width: 100%; 
+            padding: 10px; 
+            background: rgba(255,255,255,0.1); 
+            border: 1px solid rgba(255,255,255,0.2); 
+            color: white; 
+            border-radius: 8px; 
+        }
+        
+        .file-upload-wrapper {
+            border: 2px dashed rgba(255,255,255,0.3);
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .file-upload-wrapper:hover {
+            border-color: var(--accent-primary);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-primary);
+            transition: width 0.3s;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: var(--accent-primary); color: white; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: white; }
+        .btn-full { width: 100%; }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        // --- Shared Logic (CSRF, etc) ---
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                     if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // --- Reel Logic ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+             loadMyReels();
+        });
+
+        async function loadMyReels() {
+            try {
+                const currentRestaurantId = "{{ user.restaurant_profile.id|default:'' }}";
+                // Optimized: Fetch only this restaurant's reels from backend
+                const response = await fetch(`/api/reels/?restaurant=${currentRestaurantId}`);
+                const data = await response.json();
+                const myReels = data.results || data;
+
+                const container = document.getElementById('reels-container');
+                
+                if (myReels.length === 0) {
+                     container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-video" style="font-size: 3.5rem; opacity: 0.4; color: var(--accent-primary); margin-bottom: 15px;"></i>
+                            <h4 style="color: white; margin-bottom: 0.75rem; font-size: 1.2rem;">No posts yet</h4>
+                            <p style="margin-bottom: 1.5rem; font-size: 0.95rem;">Share your culinary moments with the world!</p>
+                            <button onclick="openAddReelModal()" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Upload Now
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = myReels.map(reel => {
+                    let mediaContent = '';
+                    if (reel.is_video && reel.video_url) {
+                        mediaContent = `<video src="${reel.video_url}" muted loop onmouseover="this.play()" onmouseout="this.pause()" style="width:100%; height:100%; object-fit:cover;"></video>`;
+                    } else if (reel.image || reel.image_url) {
+                        // Use image or image_url. Serializer ensures we get a URL.
+                        const imgUrl = reel.image || reel.image_url; 
+                        mediaContent = `<img src="${imgUrl}" alt="Post" style="width:100%; height:100%; object-fit:cover;">`;
+                    } else {
+                        // Fallback
+                        mediaContent = `<div style="width:100%; height:100%; background:#333; display:flex; align-items:center; justify-content:center; color:#666;"><i class="fas fa-image"></i></div>`;
+                    }
+
+                    return `
+                    <div class="reel-card">
+                        ${mediaContent}
+                        
+                        <div class="reel-actions">
+                            <button class="btn-icon-circle" onclick="editReel(${reel.id})" title="Edit Caption">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon-circle" onclick="deleteReel(${reel.id})" title="Delete" style="background: rgba(231, 76, 60, 0.8);">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+
+                        <div class="reel-overlay">
+                            <p style="color:white; margin:0 0 5px 0; font-size:0.9rem; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                ${reel.caption}
+                            </p>
+                            <div class="reel-stats">
+                                <span><i class="fas fa-heart" style="color: #ff6b6b;"></i> ${reel.likes_count || 0}</span>
+                                <span><i class="fas fa-comment" style="color: #4cd137;"></i> ${reel.comments_count || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                `}).join('');
+
+            } catch (error) {
+                console.error('Error loading reels:', error);
+                document.getElementById('reels-container').innerHTML = '<div style="color:red; text-align:center; grid-column:1/-1;">Failed to load posts.</div>';
+            }
+        }
+
+        // --- Upload Logic ---
+        function openAddReelModal() {
+            document.getElementById('addReelModal').style.display = 'block';
+        }
+        function closeAddReelModal() {
+            document.getElementById('addReelModal').style.display = 'none';
+            document.getElementById('reelVideoFile').value = '';
+            document.getElementById('reelCaption').value = '';
+            document.getElementById('uploadProgress').style.display = 'none';
+            selectedFile = null; // Clear selected file
+        }
+
+        let selectedFile = null;
+        function handleFileSelect(e) {
+            selectedFile = e.target.files[0];
+        }
+
+        async function uploadReel() {
+            if(!selectedFile) {
+                alert("Please select a file!");
+                return;
+            }
+            if(selectedFile.size > 50 * 1024 * 1024) {
+                 alert("File too large (Max 50MB)");
+                 return;
+            }
+
+            const caption = document.getElementById('reelCaption').value;
+            const formData = new FormData();
+            
+            if (selectedFile.type.startsWith('image/')) {
+                formData.append('image_file', selectedFile);
+            } else {
+                formData.append('video_file', selectedFile);
+            }
+            
+            formData.append('caption', caption);
+
+            // UI Updates
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            document.getElementById('uploadProgress').style.display = 'block';
+            
+            try {
+                // Using XHR for progress
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/reels/upload/');
+                xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percent = (e.loaded / e.total) * 100;
+                        document.getElementById('progressBar').style.width = percent + '%';
+                        document.getElementById('uploadStatus').innerText = `Uploading: ${Math.round(percent)}%`;
+                    }
+                };
+
+                xhr.onload = function() {
+                    if(xhr.status === 200 || xhr.status === 201) {
+                         alert("✅ Post Uploaded Successfully!");
+                         closeAddReelModal();
+                         loadMyReels();
+                    } else {
+                         alert("❌ Upload Failed: " + xhr.responseText);
+                    }
+                    btn.disabled = false;
+                };
+
+                xhr.onerror = function() {
+                     alert("❌ Network Error");
+                     btn.disabled = false;
+                };
+
+                xhr.send(formData);
+
+            } catch(e) {
+                console.error(e);
+                alert("Error uploading");
+                btn.disabled = false;
+            }
+        }
+
+        // --- Edit/Delete Logic ---
+        async function deleteReel(id) {
+            if(!confirm("Are you sure you want to delete this reel?")) return;
+            try {
+                const res = await fetch(`/api/reels/${id}/`, {
+                    method: 'DELETE',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                });
+                if(res.ok) {
+                    loadMyReels(); // Reload
+                } else {
+                    alert("Failed to delete");
+                }
+            } catch(e) { console.error(e); alert("Connection error"); }
+        }
+
+        async function editReel(id) {
+             try {
+                const res = await fetch(`/api/reels/${id}/`);
+                const data = await res.json();
+                document.getElementById('editReelId').value = id;
+                document.getElementById('editReelCaption').value = data.caption;
+                document.getElementById('editReelModal').style.display = 'block';
+             } catch(e) { alert("Error fetching details"); }
+        }
+
+        async function saveReelEdit() {
+            const id = document.getElementById('editReelId').value;
+            const caption = document.getElementById('editReelCaption').value;
+
+             try {
+                const res = await fetch(`/api/reels/${id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({caption: caption})
+                });
+                if(res.ok) {
+                    document.getElementById('editReelModal').style.display = 'none';
+                    loadMyReels();
+                    alert("Updated!");
+                } else {
+                    alert("Failed to update");
+                }
+             } catch(e) { alert("Connection Error"); }
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>

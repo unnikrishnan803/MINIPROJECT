@@ -78,7 +78,7 @@ class ReelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Reel
-        fields = ['id', 'restaurant', 'restaurant_name', 'restaurant_avatar', 'video_url', 'caption', 'likes_count', 'comments_count', 'is_liked', 'created_at', 'food_item', 'food_item_id', 'food_item_name', 'food_item_price', 'food_item_image', 'is_following_restaurant']
+        fields = ['id', 'restaurant', 'restaurant_name', 'restaurant_avatar', 'video_url', 'image', 'image_url', 'is_video', 'caption', 'likes_count', 'comments_count', 'is_liked', 'created_at', 'food_item', 'food_item_id', 'food_item_name', 'food_item_price', 'food_item_image', 'is_following_restaurant']
         read_only_fields = ['restaurant']
 
     def get_food_item_image(self, obj):
@@ -118,14 +118,23 @@ class FoodItemSerializer(serializers.ModelSerializer):
     restaurant = RestaurantSerializer(read_only=True)
 
     currency_symbol = serializers.CharField(source='restaurant.user.currency_symbol', read_only=True)
+    stock_status = serializers.SerializerMethodField()
 
     class Meta:
         model = FoodItem
         fields = [
             'id', 'name', 'description', 'price', 'category', 'image', 'image_url', 'video_url', 
             'is_available', 'trend_score', 'restaurant', 'currency_symbol',
-            'quantity_available', 'estimated_sellout_time', 'popularity_score', 'preparation_time'
+            'quantity_available', 'estimated_sellout_time', 'popularity_score', 'preparation_time',
+            'stock_status'
         ]
+    
+    def get_stock_status(self, obj):
+        if not obj.is_available or obj.quantity_available <= 0:
+            return "Unavailable"
+        elif obj.quantity_available < 5:
+            return "Limited"
+        return "Available"
 
 class TableSerializer(serializers.ModelSerializer):
     booking_details = serializers.SerializerMethodField()
@@ -133,6 +142,9 @@ class TableSerializer(serializers.ModelSerializer):
     class Meta:
         model = Table
         fields = ['id', 'table_number', 'capacity', 'status', 'restaurant', 'booking_details']
+        extra_kwargs = {
+            'restaurant': {'read_only': True}
+        }
 
     def get_booking_details(self, obj):
         if obj.status == 'Booked':

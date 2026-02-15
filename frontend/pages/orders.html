@@ -215,9 +215,22 @@
         }
         
         @media (max-width: 768px) {
+            .page-title {
+                font-size: 1.5rem;
+            }
+            
             .order-header {
                 flex-direction: column;
                 gap: var(--spacing-sm);
+            }
+            
+            .order-item {
+                gap: var(--spacing-sm);
+            }
+            
+            .order-item-image {
+                width: 50px;
+                height: 50px;
             }
             
             .order-footer {
@@ -228,6 +241,17 @@
             
             .order-actions {
                 flex-direction: column;
+            }
+            
+            .order-actions button {
+                width: 100%;
+            }
+        }
+        
+        /* Tablet optimizations */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .order-card {
+                padding: var(--spacing-md);
             }
         }
     </style>
@@ -386,16 +410,22 @@
                     </div>
                     
                     <div class="order-items">
-                        ${order.items_details ? order.items_details.map(item => `
+                        ${order.items_details ? order.items_details.map(item => {
+                            // Handle multiple image sources: uploaded file, URL, or placeholder
+                            const itemImage = item.image || item.image_url || 'https://via.placeholder.com/60x60/1a1a1a/888?text=Food';
+                            return `
                             <div class="order-item">
-                                <img src="${item.image || 'https://via.placeholder.com/60'}" alt="${item.name}" class="order-item-image">
+                                <img src="${itemImage}" 
+                                     alt="${item.name}" 
+                                     class="order-item-image"
+                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/60x60/1a1a1a/888?text=No+Image';">
                                 <div class="order-item-details">
                                     <div class="order-item-name">${item.name}</div>
                                     <div class="order-item-meta">${item.category || 'Food'}</div>
                                 </div>
                                 <div class="order-item-price">₹${item.price}</div>
                             </div>
-                        `).join('') : '<p>No items</p>'}
+                        `}).join('') : '<p>No items</p>'}
                     </div>
                     
                     <div class="order-footer">

@@ -28,6 +28,7 @@
                 <a href="/kitchen-view/" class="nav-item"><i class="fas fa-fire"></i> Kitchen View</a>
                 <a href="#" onclick="showSection('orders')" class="nav-item"><i class="fas fa-clipboard-list"></i> Orders</a>
                 <a href="#" onclick="showSection('offers')" class="nav-item"><i class="fas fa-tags"></i> Offers</a>
+                <a href="/restaurant/videos/" class="nav-item" onclick="event.stopPropagation();"><i class="fas fa-video"></i> My Posts</a>
                 <a href="#" onclick="showSection('analytics')" class="nav-item"><i class="fas fa-chart-line"></i> Analytics</a>
                 <a href="#" onclick="showSection('settings')" class="nav-item"><i class="fas fa-cog"></i> Settings</a>
             </nav>
@@ -97,6 +98,9 @@
                         </div>
                     </div>
                 </section>
+
+
+
 
                 <!-- Menu Management -->
                 <section class="menu-section">
@@ -302,6 +306,8 @@
     </div>
 
     <script>
+        let ordersChart = null;
+
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -323,9 +329,24 @@
             const price = document.getElementById('newItemPrice').value;
             const imageFile = document.getElementById('newItemImage').files[0];
 
+            // Validation
             if(!name || !price) {
                 alert("Please fill in Name and Price");
                 return;
+            }
+
+            // Image file validation
+            if(imageFile) {
+                const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                if(!validImageTypes.includes(imageFile.type)) {
+                    alert('Please upload a valid image file (JPG, PNG, or WebP)');
+                    return;
+                }
+                // Max 5MB
+                if(imageFile.size > 5 * 1024 * 1024) {
+                    alert('Image size must be less than 5MB');
+                    return;
+                }
             }
 
             const formData = new FormData();
@@ -348,14 +369,20 @@
                 });
 
                 if(res.ok) {
-                    alert('Item added successfully!');
+                    alert('✅ Item added successfully!');
                     closeAddFoodModal();
                     fetchMenuItems(); // Refresh list
                     // Clear form
                     document.querySelector('#addFoodModal form').reset();
                 } else {
-                    const data = await res.json();
-                    alert('Error adding item: ' + JSON.stringify(data));
+                    const contentType = res.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const data = await res.json();
+                        const errorMsg = Object.entries(data).map(([key, val]) => `${key}: ${val}`).join('\n');
+                        alert('❌ Error adding item:\n' + errorMsg);
+                    } else {
+                        alert('❌ Server error. Status: ' + res.status);
+                    }
                 }
             } catch(err) {
                 console.error(err);
@@ -387,6 +414,9 @@
                 document.querySelector('#addFoodModal .btn-primary').innerText = "Save Changes";
                 document.querySelector('#addFoodModal .btn-primary').onclick = function() { updateFoodItem(id); };
                 
+                // Clear any previous file selection
+                document.getElementById('newItemImage').value = '';
+
                 // Fetch item details to populate form
                 try {
                     const res = await fetch(`/api/food-items/${id}/`);
@@ -407,6 +437,20 @@
             const category = document.getElementById('newItemCategory').value;
             const price = document.getElementById('newItemPrice').value;
             const imageFile = document.getElementById('newItemImage').files[0];
+
+            // Validation logic (copied from addFoodItem)
+            if(imageFile) {
+                const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+                if(!validImageTypes.includes(imageFile.type)) {
+                    alert('Please upload a valid image file (JPG, PNG, or WebP)');
+                    return;
+                }
+                // Max 5MB
+                if(imageFile.size > 5 * 1024 * 1024) {
+                    alert('Image size must be less than 5MB');
+                    return;
+                }
+            }
 
             const formData = new FormData();
             formData.append('name', name);
@@ -635,9 +679,18 @@
                     
                     let itemsHtml = order.items_details.map(item => `<li>${item.name} <span style="float:right;">$${item.price}</span></li>`).join('');
                     
+                    // Fallback for missing table
+                    let tableDisplay = '';
+                    if (order.table_number) {
+                        tableDisplay = `Table ${order.table_number}`;
+                    } else {
+                        // Capitalize order type
+                         tableDisplay = (order.order_type || 'Order').charAt(0).toUpperCase() + (order.order_type || 'Order').slice(1);
+                    }
+
                     card.innerHTML = `
                         <div class="order-header">
-                            <span class="table-tag">Table ${order.table_number}</span>
+                            <span class="table-tag">${tableDisplay}</span>
                             <span class="status-tag ${order.status.toLowerCase()}">${order.status}</span>
                         </div>
                         <ul class="order-items">
@@ -796,7 +849,25 @@
             const videoFile = document.getElementById('reelVideoFile').files[0];
             const caption = document.getElementById('reelCaption').value;
             
-            if(!videoFile) return alert("Video file is required");
+            // Validation
+            if(!videoFile) {
+                alert("📹 Please select a video file");
+                return;
+            }
+
+            // Video file type validation
+            const validVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska'];
+            if(!validVideoTypes.includes(videoFile.type)) {
+                alert('❌ Please upload a valid video file (MP4, WebM, MOV, or MKV)');
+                return;
+            }
+
+            // Max 50MB for videos
+            const maxSize = 50 * 1024 * 1024;
+            if(videoFile.size > maxSize) {
+                alert('❌ Video size must be less than 50MB.\nCurrent size: ' + (videoFile.size / (1024 * 1024)).toFixed(2) + 'MB');
+                return;
+            }
 
             const btn = document.querySelector('#addReelModal button[type="submit"]');
             const originalText = btn.innerHTML;
@@ -818,13 +889,19 @@
                 });
                 
                 if(res.ok) {
-                    alert("Reel Posted Successfully! 🎥");
+                    alert("✅ Reel Posted Successfully! 🎥\nYour reel will appear in the feed shortly.");
                     document.getElementById('addReelModal').style.display = 'none';
                     document.getElementById('reelVideoFile').value = '';
                     document.getElementById('reelCaption').value = '';
                 } else {
-                    const err = await res.json();
-                    alert("Error posting reel: " + JSON.stringify(err));
+                    const contentType = res.headers.get("content-type");
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const err = await res.json();
+                        const errorMsg = err.error || JSON.stringify(err);
+                        alert("❌ Error posting reel: " + errorMsg);
+                    } else {
+                        alert("❌ Server error. Status: " + res.status + "\nPlease try again or contact support.");
+                    }
                 }
             } catch(e) {
                 console.error(e);
@@ -949,7 +1026,31 @@
             }
         }
         
+
+        
     </script>
+    <style>
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+    </style>
     <style>
         /* Order Card Styles (Same as Staff Dashboard) */
         .orders-grid {
@@ -981,5 +1082,8 @@
         .order-items li { padding: 2px 0; }
         .order-total { font-weight: bold; text-align: right; margin-top: 5px; }
     </style>
+    
+
+    
 </body>
 </html>

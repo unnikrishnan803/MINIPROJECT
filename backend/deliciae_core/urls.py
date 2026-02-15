@@ -20,7 +20,7 @@ from core.views import (
     IndexView, LoginView, RegisterView, DashboardView, KitchenView,
     HomeView, ReelsView, OrdersView, ProfileView, SettingsView, SearchView,
     WalletView, BookingsView, OffersView, RestaurantProfileView,
-    CartView, CheckoutView  # New page views
+    CartView, CheckoutView, RestaurantVideosView  # New page views
 )
 
 urlpatterns = [
@@ -49,7 +49,9 @@ urlpatterns = [
     
     # Legacy Dashboard (for restaurant/staff)
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('restaurant/dashboard/', DashboardView.as_view(), name='restaurant_dashboard'), # Alias for consistency
     path('kitchen-view/', KitchenView.as_view(), name='kitchen-view'),
+    path('restaurant/videos/', RestaurantVideosView.as_view(), name='restaurant_videos'),
 ]
 
 # Serve media files in development

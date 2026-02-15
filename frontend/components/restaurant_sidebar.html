@@ -1,0 +1,126 @@
+<aside class="hidden md:flex fixed top-0 left-0 h-screen w-[240px] bg-[#0d0d10] border-r border-white/10 flex-col z-50">
+    <!-- Logo -->
+    <div class="p-6 border-b border-white/10">
+        <a href="{% url 'dashboard' %}" class="flex items-center gap-2 text-2xl font-bold text-white">
+            <i class="fas fa-utensils text-[#FF6B35]"></i>
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-[#FF6B35] to-[#FFC107]">Deliciae</span>
+            <span class="text-[10px] bg-[#FF6B35] text-white px-1.5 py-0.5 rounded-md self-start mt-1">Partner</span>
+        </a>
+    </div>
+
+    <!-- Menu -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar py-6">
+        <ul class="flex flex-col gap-2 px-3">
+            <!-- Dashboard -->
+            <li>
+                <a href="#" onclick="showDashboardSection('overview-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group active-nav-item" id="nav-overview">
+                    <i class="fas fa-home w-5 text-center group-hover:scale-110 transition-transform text-[#FF6B35]"></i>
+                    <span class="font-medium text-[#FF6B35]">Dashboard</span>
+                </a>
+            </li>
+
+            <!-- Menu -->
+            <li>
+                <a href="#" onclick="showDashboardSection('menu-view'); fetchRestaurantMenu(); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-menu">
+                    <i class="fas fa-utensils w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Menu Management</span>
+                </a>
+            </li>
+
+            <!-- Orders -->
+            <li>
+                <a href="#" onclick="showDashboardSection('orders-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-orders">
+                    <i class="fas fa-box w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Orders</span>
+                </a>
+            </li>
+
+            <!-- Kitchen Display -->
+            <li>
+                <a href="/kitchen-view/" target="_blank" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-kitchen">
+                    <i class="fas fa-fire w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Kitchen View</span>
+                </a>
+            </li>
+
+            <!-- Table Booking -->
+            <li>
+                <a href="#" onclick="showDashboardSection('tables-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-tables">
+                    <i class="fas fa-chair w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Table Booking</span>
+                </a>
+            </li>
+
+            <!-- Reels / Posts -->
+            <li>
+                <a href="#" onclick="showDashboardSection('reels-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-reels">
+                    <i class="fas fa-video w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Reels / Posts</span>
+                </a>
+            </li>
+
+            <!-- Offers -->
+            <li>
+                <a href="#" onclick="showDashboardSection('offers-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-offers">
+                    <i class="fas fa-gift w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Offers</span>
+                </a>
+            </li>
+
+            <!-- Reviews -->
+            <li>
+                <a href="#" onclick="showDashboardSection('reviews-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-reviews">
+                    <i class="fas fa-star w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Reviews</span>
+                </a>
+            </li>
+
+            <!-- Followers -->
+            <li>
+                <a href="#" onclick="showDashboardSection('followers-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-followers">
+                    <i class="fas fa-users w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Followers</span>
+                </a>
+            </li>
+
+            <!-- AI Trend Analytics -->
+            <li>
+                <a href="#" onclick="showDashboardSection('analytics-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-analytics">
+                    <i class="fas fa-chart-line w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">AI Analytics</span>
+                </a>
+            </li>
+            
+            <li class="my-2 border-b border-white/5"></li>
+
+            <li>
+                <a href="#" onclick="showDashboardSection('settings-view'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-[12px] text-gray-400 hover:text-white hover:bg-white/5 transition-all group" id="nav-settings">
+                    <i class="fas fa-cog w-5 text-center group-hover:scale-110 transition-transform"></i>
+                    <span class="font-medium">Settings</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- User Profile & Logout -->
+    <div class="p-4 border-top border-white/10 bg-[#0f0f0f]">
+        <div class="flex items-center gap-3 mb-4 px-2">
+            <img src="{{ user.socialaccount_set.first.get_avatar_url|default:'https://ui-avatars.com/api/?name='|add:user.username }}" alt="{{ user.username }}" class="w-10 h-10 rounded-full border-2 border-[#FF6B35]/20">
+            <div class="overflow-hidden">
+                <h4 class="text-white text-sm font-semibold truncate">{{ user.first_name|default:user.username }}</h4>
+                <div class="flex items-center gap-1 text-xs text-gray-500">
+                    <span>General</span>
+                    <span>•</span>
+                    <span class="truncate">N/A <i class="fas fa-star text-yellow-500 text-[10px]"></i></span>
+                </div>
+            </div>
+            <a href="{% url 'restaurant_profile' user.restaurant_profile.id %}" target="_blank" class="ml-auto text-gray-500 hover:text-white transition-colors" title="View Public Profile">
+                <i class="fas fa-external-link-alt"></i>
+            </a>
+        </div>
+        <a href="{% url 'account_logout' %}" class="flex items-center justify-center gap-2 w-full py-2.5 rounded-[12px] bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all group">
+            <i class="fas fa-sign-out-alt group-hover:scale-110 transition-transform"></i>
+            <span class="font-medium text-sm">Logout</span>
+        </a>
+    </div>
+</aside>

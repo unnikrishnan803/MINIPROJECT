@@ -160,17 +160,25 @@ class Order(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
 
+from django.utils import timezone
+
 class FoodAnalytics(models.Model):
     food_item = models.ForeignKey(FoodItem, on_delete=models.CASCADE)
     interaction_type = models.CharField(max_length=20) # view, click, order
+    created_at = models.DateTimeField(default=timezone.now)
 
 # Social Network Models
 
 class Reel(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='reels')
     food_item = models.ForeignKey(FoodItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='reels')
-    video_url = models.URLField(help_text="URL to the video file")
+    video_url = models.URLField(help_text="URL to the video file", blank=True, null=True)
+    image = models.ImageField(upload_to='reel_images/', blank=True, null=True)
+    image_url = models.URLField(blank=True, null=True)
+    is_video = models.BooleanField(default=True)
     caption = models.TextField(blank=True)
+    is_trending = models.BooleanField(default=False)
+    engagement_score = models.FloatField(default=0.0)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

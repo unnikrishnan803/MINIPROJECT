@@ -1,0 +1,10 @@
+ID    Name                      Email                          Image      Created             
+------------------------------------------------------------------------------------------
+5     Signal Grill              loc_sig@test.com               NONE       2026-02-08 13:31
+6     Signal Tacos                                             NONE       2026-02-08 13:31
+7     Mehar                     mehar@gmail.com                IMG        2026-02-09 13:50
+8     Test Bistro               rest@example.com               NONE       2026-02-13 13:53
+9     Grill and Chill           grill@gmail.com                NONE       2026-02-14 12:00
+10    Al-Reem Restaurant        alreem@gmail.com               IMG        2026-02-15 13:09
+
+--- Users with role 'restaurant' without profiles ---

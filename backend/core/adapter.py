@@ -20,3 +20,24 @@ class CustomAccountAdapter(DefaultAccountAdapter):
             user.save()
             
         return user
+
+    def get_login_redirect_url(self, request):
+        """
+        Redirect users based on their role after login.
+        """
+        user = request.user
+        
+        # 1. Admin / Superuser
+        if user.is_superuser:
+            return '/admin/'
+            
+        # 2. Restaurant
+        if user.role == 'restaurant':
+            return '/dashboard/'
+            
+        # 3. Staff (Restaurant specific)
+        if user.role == 'staff':
+            return '/dashboard/?view=tables'
+            
+        # 4. Customer (Default)
+        return '/home/'

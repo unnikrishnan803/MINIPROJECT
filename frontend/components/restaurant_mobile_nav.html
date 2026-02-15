@@ -1,0 +1,93 @@
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-[#0d0d10]/90 backdrop-blur-md border-t border-white/10 z-50 pb-safe">
+    <div class="flex justify-around items-center h-16 px-2">
+        <!-- Home -->
+        <a href="#" onclick="showDashboardSection('overview-view'); updateMobileNav(this); return false;" class="flex flex-col items-center justify-center w-full h-full text-[#FF6B35] transition-colors nav-mobile-item active" data-target="overview-view">
+            <i class="fas fa-home text-xl mb-1"></i>
+            <span class="text-[10px] font-medium">Home</span>
+        </a>
+
+        <!-- Menu -->
+        <a href="#" onclick="showDashboardSection('menu-view'); fetchRestaurantMenu(); updateMobileNav(this); return false;" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-white transition-colors nav-mobile-item" data-target="menu-view">
+            <i class="fas fa-utensils text-xl mb-1"></i>
+            <span class="text-[10px] font-medium">Menu</span>
+        </a>
+
+        <!-- Orders -->
+        <a href="#" onclick="showDashboardSection('orders-view'); updateMobileNav(this); return false;" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-white transition-colors nav-mobile-item" data-target="orders-view">
+            <i class="fas fa-clipboard-list text-xl mb-1"></i>
+            <span class="text-[10px] font-medium">Orders</span>
+        </a>
+
+        <!-- Add Button (Floating Look) -->
+        <div class="relative -top-5">
+            <button onclick="toggleAddMenu()" class="w-14 h-14 rounded-full bg-gradient-to-r from-[#FF6B35] to-[#FF9F43] flex items-center justify-center text-white shadow-lg shadow-orange-500/40 transform transition-transform active:scale-95 border-4 border-[#0d0d10]">
+                <i class="fas fa-plus text-2xl"></i>
+            </button>
+            <!-- Dropup Menu -->
+            <div id="addMenuDropdown" class="absolute bottom-16 left-1/2 transform -translate-x-1/2 w-48 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-xl overflow-hidden transition-all duration-200 opacity-0 invisible scale-95 origin-bottom">
+                <a href="#" onclick="openAddFoodModal(); toggleAddMenu(); return false;" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-[#FF6B35]/20 flex items-center justify-center text-[#FF6B35]">
+                        <i class="fas fa-utensils text-xs"></i>
+                    </div>
+                    <span class="text-sm font-medium">Add Food Item</span>
+                </a>
+                <a href="#" onclick="openUploadReelModal(); toggleAddMenu(); return false;" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 text-gray-300 hover:text-white transition-colors border-t border-white/5">
+                    <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500">
+                        <i class="fas fa-video text-xs"></i>
+                    </div>
+                    <span class="text-sm font-medium">Upload Reel</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Tables -->
+        <a href="#" onclick="showDashboardSection('tables-view'); updateMobileNav(this); return false;" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-white transition-colors nav-mobile-item" data-target="tables-view">
+            <i class="fas fa-border-all text-xl mb-1"></i>
+            <span class="text-[10px] font-medium">Tables</span>
+        </a>
+
+        <!-- Profile -->
+        <a href="#" onclick="showDashboardSection('settings-view'); updateMobileNav(this); return false;" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-white transition-colors nav-mobile-item" data-target="settings-view">
+            <i class="fas fa-user text-xl mb-1"></i>
+            <span class="text-[10px] font-medium">Profile</span>
+        </a>
+    </div>
+</nav>
+
+<script>
+    function updateMobileNav(element) {
+        // Reset all
+        document.querySelectorAll('.nav-mobile-item').forEach(el => {
+            el.classList.remove('text-[#FF6B35]');
+            el.classList.add('text-gray-500');
+        });
+        
+        // precise target
+        element.classList.remove('text-gray-500');
+        element.classList.add('text-[#FF6B35]');
+    }
+
+    function toggleAddMenu() {
+        const menu = document.getElementById('addMenuDropdown');
+        if (menu.classList.contains('invisible')) {
+            menu.classList.remove('invisible', 'opacity-0', 'scale-95');
+        } else {
+            menu.classList.add('invisible', 'opacity-0', 'scale-95');
+        }
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        const menu = document.getElementById('addMenuDropdown');
+        const button = event.target.closest('button');
+        if (!processClick(event, menu, button)) {
+           menu.classList.add('invisible', 'opacity-0', 'scale-95');
+        }
+    });
+
+    function processClick(event, menu, button) {
+         if (button && button.getAttribute('onclick') === 'toggleAddMenu()') return true;
+         if (menu && menu.contains(event.target)) return true;
+         return false;
+    }
+</script>

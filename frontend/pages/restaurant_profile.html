@@ -66,13 +66,22 @@
                 <a href="javascript:history.back()" class="absolute top-8 left-8 z-20 bg-black/50 hover:bg-black/70 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md transition-all">
                     <i class="fas fa-arrow-left"></i>
                 </a>
+                
+                <!-- Location Button -->
+                {% if restaurant.maps_link %}
+                <a href="{{ restaurant.maps_link }}" target="_blank"
+                   class="absolute top-8 right-8 z-20 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full flex items-center gap-2 transition-all border border-white/20">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span class="hidden md:inline">Get Directions</span>
+                </a>
+                {% endif %}
             </div>
 
             <!-- Profile Info & Content -->
             <div class="px-8 max-w-5xl mx-auto -mt-20 relative z-20 pb-20">
                 
                 <!-- Info Card -->
-                <div class="bg-[#151515] border border-white/5 rounded-2xl p-6 shadow-2xl mb-8 flex flex-col md:flex-row items-end md:items-center gap-6 animate-fade-up">
+                <div class="bg-[#151515] border border-white/5 rounded-2xl p-4 md:p-6 shadow-2xl mb-8 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6 animate-fade-up">
                     
                     <!-- Avatar -->
                     <div class="relative -mt-16 md:mt-0 flex-shrink-0">
@@ -92,6 +101,13 @@
                             <span class="w-1 h-1 bg-gray-600 rounded-full"></span>
                             <span>{{ restaurant.location }}</span>
                         </p>
+                        {% if restaurant.maps_link %}
+                        <a href="{{ restaurant.maps_link }}" target="_blank" 
+                           class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-1 transition-colors">
+                            <i class="fas fa-map-marker-alt"></i>
+                            View on Google Maps
+                        </a>
+                        {% endif %}
                         
                         <!-- Stats Mobile View (Hidden on large, shown on small if needed, but keeping simple for now) -->
                     </div>
@@ -177,7 +193,10 @@
                         {% for item in menu %}
                         <div class="bg-[#151515] p-4 rounded-xl flex gap-4 hover:bg-[#1a1a1a] transition-colors border border-white/5 group">
                             <div class="w-20 h-20 rounded-lg overflow-hidden shrink-0">
-                                <img src="{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url|default:'https://placehold.co/80' }}{% endif %}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                                <img src="{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url|default:'https://via.placeholder.com/80x80/1a1a1a/888?text=Food' }}{% endif %}" 
+                                     alt="{{ item.name }}"
+                                     class="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                                     onerror="this.onerror=null; this.src='https://via.placeholder.com/80x80/1a1a1a/888?text=No+Image';">
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex justify-between items-start mb-1">
@@ -385,6 +404,7 @@
             return cookieValue;
         }
 
-    </script>
+    <div id="bookingModal"></div>
+    <script src="{% static 'js/script.js' %}"></script>
 </body>
 </html>

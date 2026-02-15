@@ -14,8 +14,17 @@ from django.views.generic import TemplateView
 from django.contrib.auth import login
 from django.conf import settings
 import requests
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.db.models import Q, Avg, Count, Sum, F
+from datetime import datetime, timedelta
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from django.db import transaction
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from math import radians, sin, cos, sqrt, asin
@@ -23,11 +32,15 @@ from math import radians, sin, cos, sqrt, asin
 class IndexView(TemplateView):
     template_name = "index.html"
 
-class LoginView(TemplateView):
+from allauth.account.views import LoginView as AllauthLoginView, SignupView as AllauthSignupView
+from .forms import RestaurantSignupForm
+
+class LoginView(AllauthLoginView):
     template_name = "login.html"
 
-class RegisterView(TemplateView):
+class RegisterView(AllauthSignupView):
     template_name = "register.html"
+    form_class = RestaurantSignupForm
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -47,6 +60,12 @@ class OrdersView(LoginRequiredMixin, TemplateView):
     """Orders tracking page"""
     template_name = "pages/orders.html"
     login_url = '/login/'
+
+class RestaurantVideosView(LoginRequiredMixin, TemplateView):
+    """Restaurant videos management page"""
+    template_name = "restaurant_videos.html"
+    login_url = '/login/'
+
 
 class ProfileView(LoginRequiredMixin, TemplateView):
     """User profile page"""
@@ -91,6 +110,12 @@ class SearchView(LoginRequiredMixin, TemplateView):
                 Q(category__icontains=query) |
                 Q(restaurant__name__icontains=query)
             ).select_related('restaurant').distinct()
+            
+            # 🧠 AI Logic: Log 'search' interaction for matched items
+            # This feeds into the Trend Score = (search * 0.3) formula
+            if self.request.user.is_authenticated:
+                for item in food_items:
+                    FoodAnalytics.objects.create(food_item=item, interaction_type='search')
         else:
             # Default ordering if no specific query
             if not sort_by:
@@ -333,6 +358,65 @@ class TrendView(generics.ListAPIView):
         # Return top 5 items sorted by trend_score descending
         return FoodItem.objects.order_by('-trend_score')[:5]
 
+from .utils import calculate_trend_scores, calculate_trending_reels
+
+class RefreshTrendView(APIView):
+    """
+    API to manually trigger AI Trend Calculation.
+    In production, this would be a Celery task.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        calculate_trend_scores()
+        calculate_trending_reels()
+        return Response({'status': 'AI Trend Scores Refreshed', 'message': 'Successfully recalculated trends based on orders, searches, and reels.'})
+
+class AvailabilityToggleView(APIView):
+    def post(self, request):
+        calculate_trend_scores()
+        calculate_trending_reels()
+        return Response({'status': 'AI Trend Scores Refreshed', 'message': 'Successfully recalculated trends based on orders, searches, and reels.'})
+
+class DemandPredictionView(APIView):
+    """
+    🧠 AI Future Demand Prediction (Mock/Basic)
+    Predicts demand based on Day of Week and Time.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        import datetime
+        today = datetime.datetime.now().strftime("%A") # e.g., 'Friday'
+        
+        # Simple Rule-Based AI Logic
+        if today in ['Friday', 'Saturday', 'Sunday']:
+            prediction = {
+                "day": today,
+                "demand_level": "High 📈",
+                "peak_hours": "19:00 - 22:00",
+                "reason": "Weekend Rush + High Search Volume",
+                "suggested_prep": "Prepare extra biryani and starters."
+            }
+        elif today in ['Tuesday']:
+            prediction = {
+                "day": today,
+                "demand_level": "Low 📉",
+                "peak_hours": "20:00 - 21:00",
+                "reason": "Mid-week lull",
+                "suggested_prep": "Focus on offers to boost sales."
+            }
+        else:
+            prediction = {
+                "day": today,
+                "demand_level": "Medium 📊",
+                "peak_hours": "19:30 - 21:30",
+                "reason": "Standard Weekday",
+                "suggested_prep": "Standard inventory sufficient."
+            }
+            
+        return Response(prediction)
+
 class AvailabilityToggleView(APIView):
     def post(self, request, pk):
         try:
@@ -341,9 +425,6 @@ class AvailabilityToggleView(APIView):
             food_item.is_available = not food_item.is_available
             food_item.save()
             return Response({'status': 'success', 'is_available': food_item.is_available})
-        except FoodItem.DoesNotExist:
-            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
-
         except FoodItem.DoesNotExist:
             return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -380,14 +461,14 @@ class TableViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Table.objects.all()
         
-        # If specific restaurant requested
+        # Allow fetching tables for a specific restaurant (e.g., for booking)
         restaurant_id = self.request.query_params.get('restaurant')
         if restaurant_id:
              return queryset.filter(restaurant_id=restaurant_id)
-             
+
         if user.role == 'restaurant':
             return Table.objects.filter(restaurant__user=user)
-        if user.role == 'staff' and user.staff_restaurant:
+        if user.role == 'staff' and hasattr(user, 'staff_restaurant'):
              return Table.objects.filter(restaurant=user.staff_restaurant)
              
         # By default return nothing if no context
@@ -410,9 +491,36 @@ class BookingViewSet(viewsets.ModelViewSet):
             return Booking.objects.filter(restaurant__user=user)
         if user.role == 'staff' and user.staff_restaurant:
              return Booking.objects.filter(restaurant=user.staff_restaurant)
+        
         return Booking.objects.filter(customer=user)
 
     def perform_create(self, serializer):
+        # 🧠 Smart Booking Logic: Conflict Detection
+        table = serializer.validated_data.get('table')
+        date_time = serializer.validated_data.get('date_time')
+        restaurant = serializer.validated_data.get('restaurant')
+        
+        if table:
+            # Check for existing confirmed bookings for this table within +/- 1 hour
+            # (Assuming strict slot booking, or we can just check exact time)
+            from datetime import timedelta
+            
+            start_time = date_time - timedelta(minutes=59)
+            end_time = date_time + timedelta(minutes=59)
+            
+            conflicts = Booking.objects.filter(
+                table=table,
+                date_time__range=(start_time, end_time),
+                status='Confirmed'
+            )
+            
+            if conflicts.exists():
+                # 🧠 AI Suggestion Mock: Suggest next available time (e.g. +1 hour)
+                next_slot = date_time + timedelta(hours=1)
+                raise serializers.ValidationError(
+                    f"Table is already booked at this time. Suggestion: Try {next_slot.strftime('%H:%M')}."
+                )
+        
         serializer.save(customer=self.request.user)
 
 class DiningOrderViewSet(viewsets.ModelViewSet):
@@ -441,27 +549,37 @@ class DiningOrderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        # Staff creating order for a table
+        order = None
+        
+        # 1. Determine Restaurant & Customer based on Role
         if user.role == 'staff' and user.staff_restaurant:
-             serializer.save(restaurant=user.staff_restaurant, customer=None)
-        # Restaurant creating order
+             order = serializer.save(restaurant=user.staff_restaurant, customer=None)
         elif user.role == 'restaurant':
-             serializer.save(restaurant=user.restaurant_profile, customer=None)
-        # Customer creating order (if allowed)
-        # Customer creating order (if allowed)
+             order = serializer.save(restaurant=user.restaurant_profile, customer=None)
         else:
-             # Find restaurant from request data
+             # Customer or Walk-in logic
              restaurant_id = self.request.data.get('restaurant')
              if restaurant_id:
                  try:
                      restaurant = Restaurant.objects.get(id=restaurant_id)
-                     serializer.save(customer=user, restaurant=restaurant)
+                     order = serializer.save(customer=user, restaurant=restaurant)
                  except Restaurant.DoesNotExist:
                      raise serializers.ValidationError("Invalid restaurant ID")
              else:
-                 # Try to infer from first item? Too complex for now.
-                 # Let's require restaurant ID in payload.
                  raise serializers.ValidationError("Restaurant ID required for customer orders")
+        
+        # 2. Real-Time Availability Logic 🧠
+        # Decrement stock and auto-hide if empty
+        if order:
+            for item in order.items.all():
+                if item.quantity_available > 0:
+                    item.quantity_available -= 1
+                    
+                    # Logic: When stock = 0 -> Automatically hide item
+                    if item.quantity_available <= 0:
+                        item.is_available = False
+                    
+                    item.save()
 
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
@@ -545,15 +663,42 @@ class KitchenView(LoginRequiredMixin, TemplateView):
 # --- SOCIAL NETWORK VIEWS ---
 
 class ReelViewSet(viewsets.ModelViewSet):
-    queryset = Reel.objects.all().order_by('-created_at')
     serializer_class = ReelSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        queryset = Reel.objects.all().order_by('-created_at')
+        
+        # Filter by specific restaurant (for "My Posts" page)
+        restaurant_id = self.request.query_params.get('restaurant')
+        if restaurant_id:
+            queryset = queryset.filter(restaurant_id=restaurant_id)
+
+        # Filter by trending
+        trending = self.request.query_params.get('trending')
+        if trending == 'true':
+            queryset = queryset.filter(is_trending=True).order_by('-engagement_score')
+            
+        return queryset
 
     def perform_create(self, serializer):
         if self.request.user.role == 'restaurant':
             serializer.save(restaurant=self.request.user.restaurant_profile)
         else:
             raise serializers.ValidationError("Only restaurants can post reels.")
+    
+    def perform_update(self, serializer):
+        """Ensure only the reel owner can edit it"""
+        reel = self.get_object()
+        if reel.restaurant.user != self.request.user:
+            raise PermissionDenied("You can only edit your own reels")
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        """Ensure only the reel owner can delete it"""
+        if instance.restaurant.user != self.request.user:
+            raise PermissionDenied("You can only delete your own reels")
+        instance.delete()
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def like(self, request, pk=None):
@@ -586,33 +731,47 @@ class ReelViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Only restaurants can upload reels'}, status=403)
         
         video_file = request.FILES.get('video_file')
+        image_file = request.FILES.get('image_file')
         caption = request.data.get('caption', '')
         
-        if not video_file:
-            return Response({'error': 'No video file provided'}, status=400)
+        if not video_file and not image_file:
+            return Response({'error': 'No media file provided'}, status=400)
         
-        # Save file manually to media directory
         import os
         from django.conf import settings
         from django.core.files.storage import default_storage
         from django.core.files.base import ContentFile
-        
-        # Generate unique filename
         import uuid
-        ext = os.path.splitext(video_file.name)[1]
-        filename = f"reels/{uuid.uuid4()}{ext}"
+
+        restaurant = request.user.restaurant_profile
         
-        path = default_storage.save(filename, ContentFile(video_file.read()))
-        
-        # Create Reel object with local URL
-        video_url = f"{settings.MEDIA_URL}{path}"
-        
-        reel = Reel.objects.create(
-            restaurant=request.user.restaurant_profile,
-            video_url=video_url,
-            caption=caption
-        )
-        
+        if video_file:
+            # Handle Video
+            ext = os.path.splitext(video_file.name)[1]
+            filename = f"reels/videos/{uuid.uuid4()}{ext}"
+            path = default_storage.save(filename, ContentFile(video_file.read()))
+            video_url = f"{settings.MEDIA_URL}{path}"
+            
+            reel = Reel.objects.create(
+                restaurant=restaurant,
+                video_url=video_url,
+                is_video=True,
+                caption=caption
+            )
+        else:
+            # Handle Image
+            # Use the model's ImageField which handles storage automatically
+            reel = Reel.objects.create(
+                restaurant=restaurant,
+                image=image_file,
+                is_video=False,
+                caption=caption
+            )
+            # Populate image_url for API consistency if needed (though serializer handles image.url)
+            if reel.image:
+                reel.image_url = reel.image.url
+                reel.save()
+
         return Response(ReelSerializer(reel).data)
 
 class FollowViewSet(viewsets.ViewSet):

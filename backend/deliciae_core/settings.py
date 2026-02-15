@@ -96,7 +96,8 @@ LOGOUT_REDIRECT_URL = '/login/'
 
 ACCOUNT_LOGIN_METHODS = {'email', 'username'}
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -111,8 +112,8 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Use Custom Signup Form for Role Selection
-# Use Custom Signup Form for Role Selection
-# ACCOUNT_SIGNUP_FORM_CLASS = 'core.admin.CustomSignupForm'
+# Using manual form_class in views.py instead of setting it here to avoid ImproperlyConfigured
+# ACCOUNT_SIGNUP_FORM_CLASS = 'core.forms.RestaurantSignupForm'
 
 # Use Adapter for Role Logic (Avoids Circular Import)
 ACCOUNT_ADAPTER = 'core.adapter.CustomAccountAdapter'
@@ -138,9 +139,9 @@ DATABASES = {
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    # },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
@@ -205,3 +206,8 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_HTTPONLY = False  # Make it easier for JS (if needed, though django forms handle it)
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
